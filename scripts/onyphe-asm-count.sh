@@ -12,6 +12,8 @@
 #   onyphe-asm-count.sh vulnscan inventory.txt 1M vulnerable
 #
 # With no tag, one unfiltered line is reported ("(any)").
+# For vulnscan, -exists:cve is always added so only records carrying a CVE count;
+# that excludes verdicts with no CVE (e.g. unknownversion) by design.
 # Zero is reported as 0, never as "clean": see the skill for why.
 #
 # Cost: one Discovery call per tag (unlimited on Griffin View).
@@ -44,6 +46,9 @@ here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
    exit 2
 }
 
+suffix=""
+[[ "$category" == "vulnscan" ]] && suffix="-exists:cve "
+
 tags=("$@")
 [[ ${#tags[@]} -gt 0 ]] || tags=("")
 
@@ -51,7 +56,7 @@ printf '%-34s %10s %10s\n' "tag" "documents" "assets"
 for tag in "${tags[@]}"; do
    filter=""
    [[ -n "$tag" ]] && filter="tag:$tag "
-   out=$(onyphe -discovery "$category" "$inv ${filter}-since:$window -fields:ip,port" 2>/dev/null) || {
+   out=$(onyphe -discovery "$category" "$inv ${suffix}${filter}-since:$window -fields:ip,port" 2>/dev/null) || {
       echo "Discovery call failed for tag '${tag:-(any)}'." >&2
       exit 1
    }

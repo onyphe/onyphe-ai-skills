@@ -21,13 +21,26 @@ carrying a risk or a known vulnerability, optionally over a time window.
 
 ## The two categories
 
-- **riskscan** — risky configurations (`risk::*` tags). Derived from ctiscan
-  data, so it keeps the broadest and deepest scan coverage, and holds **history
-  back about seven months**: `-monthago:7` returns documents, `-monthago:8`
-  returns 0 (measured 2026-10-16).
-- **vulnscan** — CVE detections. Carries a `cve` array and a verdict tag
-  (`vulnerable`, `maybevulnerable`, `notvulnerable`, `unknownversion`). Its
-  history goes much further than riskscan; `-monthago:12` still returns documents.
+- **riskscan** — risky configurations (`risk::*` tags) **and the same CVE
+  detections as vulnscan**. Derived from ctiscan data, so it keeps the broadest and
+  deepest scan coverage, and holds **history back about seven months**:
+  `-monthago:7` returns documents, `-monthago:8` returns 0 (measured 2026-10-16).
+  It is positive-only, and its raw response (`data`) is **truncated after a period
+  of time**, so old documents keep their tags and CVEs but not the evidence.
+- **vulnscan** — the same CVE data, plus what riskscan leaves out: **negative
+  results** (`notvulnerable`, `notvulnerableversion`) and the **full stored response**
+  used to assert each verdict. Use it to prove a verdict, to show an asset was
+  checked and passed, and for history beyond seven months (`-monthago:12` still
+  returns documents). It carries a `cve` array and a verdict tag; the full set is in
+  [riskscan-vulnscan.md](../onyphe-oql/references/riskscan-vulnscan.md#vulnscan-verdict-tags).
+
+| Need | Use |
+|---|---|
+| Which assets have a CVE or a risk, with one query | `riskscan` (CVEs and `risk::*` together) |
+| Evidence: the response behind a verdict | `vulnscan` |
+| "Was it checked and found not vulnerable?" | `vulnscan` (riskscan has no negatives) |
+| Trend over the last seven months | `riskscan` |
+| History older than seven months | `vulnscan` |
 
 Field model, tags and counts: [riskscan-vulnscan.md](../onyphe-oql/references/riskscan-vulnscan.md).
 
@@ -43,6 +56,9 @@ onyphe -discovery riskscan 'inventory.txt tag:risk::exposeddatabase -fields:ip,p
 # 3. A window
 onyphe -discovery riskscan 'inventory.txt tag:risk::exposeddatabase -since:3M -fields:ip,port,tag,seen_date'
 
+# 3b. vulnscan: always add -exists:cve, so only records carrying a CVE come back
+onyphe -discovery vulnscan 'inventory.txt -exists:cve -since:3M -fields:ip,port,hostname,cve,tag,seen_date'
+
 # 4. Which tags fire, as documents AND distinct assets
 "${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-asm-count.sh" riskscan inventory.txt 3M risk::exposeddatabase risk::loginpage
 ```
@@ -57,6 +73,11 @@ measured on 2026-10-16:
   scan in the window: 57 documents for 6 assets over seven months on a small test
   inventory. Count assets, not documents.
 - **`-fields:` works** inside `-discovery` and cuts the transfer to almost nothing.
+- **vulnscan: always add `-exists:cve`.** Only 5 592 604 of 1 938 348 687 vulnscan
+  documents carry a `cve` (`onyphe -count -search 'category:vulnscan -exists:cve'`,
+  2026-10-16); the rest are negative or undecided verdicts. Documents tagged
+  `unknownversion` (no version found) normally have no `cve`, so this filter excludes them: it answers
+  "which assets have a CVE recorded", not "which assets could not be checked".
 - Blank lines and `#` comments in the file are ignored.
 - An `ip:"…"` line returns documents only if ONYPHE holds riskscan for that IP.
 
@@ -67,9 +88,16 @@ measured on 2026-10-16:
   Report it as "no signal found", and say which window and tags were tried.
 - **A document is a scan, not an asset.** Deduplicate on `ip:port` and report
   both numbers.
-- **vulnscan verdicts differ.** `vulnerable` and `notvulnerable` come from a check;
-  `unknownversion` and `maybevulnerable` mean ONYPHE could not decide. They are not
-  "not vulnerable". `cisa::kev` and `onyphe::kev` tags mark known-exploited CVEs.
+- **vulnscan verdicts come in two kinds, and carry different weight.**
+  *Check-based* (`vulnerable`, `notvulnerable`, `maybevulnerable`) come from an active,
+  non-intrusive test for that CVE and are the preferred evidence. *Version-based*
+  (`vulnerableversion`, `notvulnerableversion`, `maybevulnerableversion`,
+  `partialversion`, `unknownversion`, `version`) are the fallback when no check exists:
+  the detected product version is matched against ONYPHE's CVE list. `vulnerableversion`
+  is the **bulk** of the CVE-bearing records (4 925 037 against 438 847 for `vulnerable`,
+  2026-10-16), so a query for `tag:vulnerable` alone misses most of them. Report which
+  kind each finding is. `maybevulnerable`, `unknownversion` and `partialversion` are
+  undecided, not "not vulnerable". `cisa::kev` marks known-exploited CVEs.
 - **Shared infrastructure.** A hit on an IP that hosts someone else's content (CDN,
   shared hosting, a vendor-run service) may not be the user's to fix. Check
   `hostname` before reporting.

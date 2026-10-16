@@ -37,12 +37,20 @@ asset are "no signal", not "safe".
 `risk::vpnserver`, `risk::sensitiveprotocol`, `risk::loginpage` and any others the
 baseline shows. Rank by assets, not documents.
 
-**3. CVEs.** `onyphe-asm-count.sh vulnscan inventory.txt <window> vulnerable
-maybevulnerable cisa::kev onyphe::kev`. Pull `cve` for the `vulnerable` set:
+**3. CVEs.** riskscan already carries CVE data, so `tag:vulnerable` and `cve` can be read there together with the risk tags. Go to vulnscan for the **evidence** (the stored response behind a verdict) and for **negatives**: only vulnscan can say an asset was checked and passed. `onyphe-asm-count.sh vulnscan inventory.txt <window> vulnerable
+vulnerableversion maybevulnerable maybevulnerableversion cisa::kev`. Count **both**
+kinds: `vulnerable` is check-based (a test for that CVE found it) and
+`vulnerableversion` is version-based (the detected version is on ONYPHE's list);
+the second is about ten times larger. Report them separately, check-based first.
+Pull `cve` for the positive set:
 ```bash
-onyphe -discovery vulnscan 'inventory.txt tag:vulnerable -since:3M -fields:ip,port,hostname,cve,tag,seen_date'
+onyphe -discovery vulnscan 'inventory.txt -exists:cve -since:3M -fields:ip,port,hostname,cve,tag,seen_date'
 ```
-Known-exploited (`cisa::kev`, `onyphe::kev`) first, then count of CVEs per asset
+Always add `-exists:cve` to a vulnscan Discovery call: most vulnscan documents are
+negative or undecided verdicts with no CVE (5 592 604 of 1 938 348 687 carry one,
+2026-10-16), and without it the result is mostly noise. A side effect: documents
+tagged `unknownversion` normally carry no `cve`, so they drop out. Known-exploited
+(`cisa::kev`) first, then count of CVEs per asset
 (`cvecount`).
 
 **4. Trend.** Repeat the phase 2 counts for 1M, 3M and 7M windows. A tag that is
@@ -64,7 +72,8 @@ confidence. Then a coverage statement.
 - **No signal is not "safe".** State the unscanned or unmatched inventory entries
   explicitly and never write "no vulnerabilities".
 - **Assets, not documents.** Re-scans multiply documents.
-- **Distinguish verdicts.** `maybevulnerable` and `unknownversion` are undecided.
+- **Evidence comes from vulnscan.** riskscan's raw `data` is truncated after a period of time; cite vulnscan when a finding must be proven.
+- **Distinguish verdicts.** Check-based beats version-based. `maybevulnerable`, `partialversion` and `unknownversion` are undecided, and `vulnerableversion` is an inference from the version, not a confirmed exposure.
 - **Fixed versus unobserved is unknowable** from absence alone.
 - **Say what the window was** on every number.
 

@@ -30,7 +30,13 @@ assert_contains "query shape" "tag:risk::loginpage -since:3M -fields:ip,port" "$
 echo "--- Test: zero is printed as 0 ---"
 mock_onyphe 'true'
 out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" vulnscan "$TEST_DIR/inv.txt" 1M vulnerable 2>&1)
+assert_contains "vulnscan adds -exists:cve" "-exists:cve tag:vulnerable -since:1M" "$(cat "$TEST_DIR/calls")"
 assert_contains "zero row" "vulnerable                                  0          0" "$out"
+
+echo "--- Test: riskscan does not get -exists:cve ---"
+mock_onyphe 'true'
+PATH="$TEST_DIR:$PATH" bash "$SCRIPT" riskscan "$TEST_DIR/inv.txt" 3M risk::loginpage >/dev/null 2>&1
+assert_not_contains "riskscan unfiltered by cve" "-exists:cve" "$(cat "$TEST_DIR/calls")"
 
 echo "--- Test: invalid inventory stops before any call ---"
 printf 'foo bar\n' > "$TEST_DIR/bad.txt"
