@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "onyphe",
+  "description": "ONYPHE CLI skills for Claude Code",
+  "owner": {
+    "name": "ONYPHE",
+    "email": "contact@onyphe.io"
+  },
+  "plugins": [
+    {
+      "name": "onyphe",
+      "description": "ONYPHE CLI skills for AI agents: hunt threats, discover an organisation's assets (ASD) and assess their risks and CVEs (ASM) with riskscan, vulnscan, ctiscan and ctiurl.",
+      "author": {
+        "name": "ONYPHE",
+        "email": "contact@onyphe.io"
+      },
+      "category": "security",
+      "source": ".",
+      "license": "BSD-3-Clause",
+      "homepage": "https://www.onyphe.com"
+    }
+  ]
+}

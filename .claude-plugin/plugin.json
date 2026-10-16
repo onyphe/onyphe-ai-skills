@@ -1,0 +1,12 @@
+{
+  "name": "onyphe",
+  "description": "Claude Code skills for threat hunting, attack surface discovery (ASD) and attack surface management (ASM) with the ONYPHE CLI",
+  "version": "1.1.0",
+  "license": "BSD-3-Clause",
+  "author": {
+    "name": "ONYPHE",
+    "email": "contact@onyphe.io"
+  },
+  "repository": "https://github.com/onyphe/onyphe-ai-skills",
+  "homepage": "https://www.onyphe.com"
+}
