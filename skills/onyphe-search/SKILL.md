@@ -1,7 +1,7 @@
 ---
 name: onyphe-search
 description: Use when the user wants to run an ONYPHE search, query ONYPHE for hosts or services, find ONYPHE ctiscan/ctiurl documents matching a condition, count how many hosts match an OQL query, or search ONYPHE for a certificate/banner/hash. Wraps the `onyphe -search` and `onyphe -count -search` CLI modes. Trigger phrases include "onyphe search," "search onyphe for," "how many hosts on onyphe," "onyphe query for," "find on onyphe," and "count onyphe results." Not for pulling a full population without a result ceiling (see onyphe-export), single-asset lookup by IP/domain/hostname (see onyphe-summary), or help writing the query string itself (see onyphe-oql).
-version: 1.0.0
+version: 1.1.0
 ---
 
 # onyphe-search
@@ -11,6 +11,12 @@ version: 1.0.0
 > model returns 0 with no error. When you carry a value from a summary or datascan
 > result into a ctiscan query, translate the field name first
 > ([map](../onyphe-oql/references/datascan-ctiscan-map.md)).
+
+> **Boolean logic is `?` and `!`, never `OR`/`AND`/`NOT`.** AND is implicit,
+> `?field:v` is OR, `!field:v` is NOT, and groups need inner spaces:
+> `( ?domain:a.com ?domain:b.com )`. A literal `OR` fails with
+> `filter not allowed: ORdomain`; that is a syntax mistake, not a licence limit
+> ([syntax](../onyphe-oql/SKILL.md)).
 
 ## When to use
 
@@ -100,6 +106,14 @@ for h in 15af977ce25de452b96affa2addb1036 f4febc55ea12b31ae17cfb7e614afda8; do
     "category:ctiscan ja3s.fingerprint.md5:\"$h\" -dayago:1"
 done
 
+# Several values of one field: OR with ?, grouped (no OR keyword exists)
+onyphe -count -search \
+  'category:datascan ( ?domain:revolut.com ?domain:revolut.codes ?domain:revolutlabs.com )'
+
+# Several patterns: -orwildcard: ORs, -notwildcard: excludes
+onyphe -count -search \
+  'category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com -notwildcard:domain,revolut.fake.*'
+
 # Post-process in the same call with an OPP pipeline
 onyphe -size 100 -maxpage 1 -search \
   'category:ctiscan app.device:c2 -dayago:1 | uniq ip.dest | addcount'
@@ -148,6 +162,7 @@ result is evidence and is worth keeping.
 | Symptom | Cause and fix |
 |---|---|
 | `access denied: filter not allowed: <name>` (error 12) | The field does not exist, or is not on this licence. Check `onyphe-preflight.sh` and `onyphe-oql`. |
+| `access denied: filter not allowed: ORdomain` (also `ANDx`, `NOTx`) | You wrote an `OR`/`AND`/`NOT` keyword; OQL has none, so it was read as a field name. Rewrite with `?` (OR) / `!` (NOT) in a spaced group: `( ?domain:a ?domain:b )`. Do not conclude OR is unsupported. |
 | `syntax error: validate: missing closing group after` | An OQLv2 condition group is unbalanced. Groups need a space inside the parentheses: `( ?a:1 ?b:2 )`. |
 | `WARNING: Too fast, sleeping before retry...` | HTTP 429. The CLI sleeps 1 s and retries **indefinitely** on its own — it will not give up, so a command that looks hung may just be rate-limited. The API runs at roughly 1 request/second. |
 | Empty output, no error | Very often the dialect trap above. Re-read the field names before believing it. |

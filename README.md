@@ -100,7 +100,7 @@ a file.
 
 # 3. Risks and CVEs on those assets, over the last three months
 onyphe -discovery riskscan 'inventory.txt tag:risk::exposeddatabase -since:3M -fields:ip,port,tag,seen_date'
-./scripts/onyphe-asm-count.sh vulnscan inventory.txt 3M vulnerable cisa::kev
+./scripts/onyphe-asm-count.sh vulnscan inventory.txt 3M vulnerable vulnerableversion cisa::kev
 ```
 
 riskscan is generated from ONYPHE's ctiscan data, so it has the broadest and
@@ -132,6 +132,9 @@ All advisory, all always exit 0.
 - `check-category-fields.sh` — warns when a query mixes the datascan and
   ctiscan field dialects. This is the highest-value check in the package: the
   mistake returns **0 with no error**.
+- `check-oql-boolean.sh` — warns when a query uses `OR`/`AND`/`NOT` as keywords.
+  OQL has none (`?field:v` is OR, `!field:v` is NOT); the API's
+  `filter not allowed: ORdomain` otherwise reads like a licence limit.
 - `check-asd-live.sh` — warns on live-DNS ASD tools (`-asd-dns-*`), on the ASM
   Inventory API (`-asm-inventory-*`, and `delall` in particular), on on-demand
   scanning, and on `-discovery` calls with no `-since:` or `-fields:`.
@@ -179,9 +182,9 @@ re-checked against your own key.
 ## Not covered
 
 - The ASM Inventory API (`-asm-inventory-*`). It changes data held in your ONYPHE
-  ASM Edition environment. This package keeps the inventory in a local `inventory.txt`
-  and checks it with `-discovery` instead.
-- On-demand scanning (`-ondemand-*`), which originates live scans against provided 
+  account. This package keeps the inventory in a local `inventory.txt` and checks it
+  with `-discovery` instead.
+- On-demand scanning (`-ondemand-*`), which originates scans against third-party
   targets.
 - Live DNS ASD tools (`-asd-dns-*`) are covered, but only with explicit opt-in per
   run: ONYPHE sends the lookups for the domains you give it.

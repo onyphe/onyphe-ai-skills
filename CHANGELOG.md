@@ -6,6 +6,21 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- Advisory `check-oql-boolean.sh` hook: flags `OR`/`AND`/`NOT`/`||`/`&&` written as
+  keywords in an OQL query. OQL has none; the API answers
+  `filter not allowed: ORdomain`, which agents misread as "OR is unsupported".
+- `oql-boolean-or` eval and `test-hook-boolean.sh`.
+
+### Changed
+
+- `onyphe-oql` and `onyphe-search` (1.1.0) state that boolean logic is `?` (OR),
+  `!` (NOT) and implicit AND, with a several-values recipe and
+  `-orwildcard:` / `-notwildcard:` / `-orregexp:` / `-notregexp:` examples; the
+  search error table maps the `ORdomain` signature. A one-line reminder is added
+  to `onyphe-export`, `onyphe-pivot` and `onyphe-hunt`.
+
 ## [1.1.0] — 2026-10-16
 
 ### Added
@@ -36,6 +51,18 @@ All notable changes to this package are documented here. The format follows
 - `check-category-fields.sh` applies the datascan model to every explicitly named
   non-ctiscan/ctiurl category, not only `category:datascan`.
 
+### Measured
+
+- A malformed inventory line sent to `-discovery` returns 10 000 unrelated
+  documents rather than an error (2026-10-16, riskscan).
+- riskscan retention: `-monthago:7` returns documents, `-monthago:8` returns 0.
+
+### Fixed
+
+- Removed the claim that ctiscan `component.*` is host-level / service-aggregated
+  (`onyphe-honeypot`, `onyphe-pivot`, `onyphe-hunt` pivot patterns, `onyphe-oql`
+  field reference). Every ctiscan field except `services.port` is port-level, so
+  the "good selector, bad population count" caveats built on it are gone.
 
 ## [1.0.0] — 2026-09-25
 

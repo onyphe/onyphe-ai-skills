@@ -11,6 +11,10 @@ version: 1.0.0
 > model returns 0 with no error. When you carry a value from a summary or datascan
 > result into a ctiscan query, translate the field name first
 > ([map](../onyphe-oql/references/datascan-ctiscan-map.md)).
+>
+> **OR is `?`, NOT is `!` — there is no `OR`/`NOT` keyword.**
+> `( ?domain:a.com ?domain:b.com )`; a literal `OR` fails with
+> `filter not allowed: ORdomain` ([syntax](../onyphe-oql/SKILL.md)).
 
 ## When to use
 

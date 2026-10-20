@@ -1,7 +1,7 @@
 ---
 name: onyphe-oql
 description: Use when the user needs help with OQL, ONYPHE Query Language syntax, how to write an ONYPHE query, which ONYPHE fields exist, or why an ONYPHE query returned nothing — field names, operators, condition groups, time functions, wildcards and regexp, and the ctiscan/ctiurl versus datascan field translation. Trigger phrases include "OQL syntax," "onyphe query syntax," "how do I write an onyphe query," "what onyphe fields are available," "onyphe query help," and "why does my onyphe query return 0." This is a reference skill, not a CLI wrapper — defer to onyphe-search or onyphe-export to actually run the query once it is built.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # onyphe-oql
@@ -27,6 +27,9 @@ This skill does not run anything. Once the query is right, hand it to
 category:<CATEGORY> field:<value> field:<value> -<function>:<value>
 ```
 
+- **There is no `OR`, `AND` or `NOT` keyword.** Writing one is not a licence
+  problem and not "OR unsupported": the parser glues it to the next token as a
+  field name and fails with `filter not allowed: ORdomain`. Use the prefixes below.
 - **AND is implicit.** Adjacent terms all have to match.
 - `!field:value` — NOT.
 - `?field:value` — OR. Requires a Lion View licence or above.
@@ -45,6 +48,44 @@ category:ctiscan ( ?services.port:8080 ?services.port:1723 ) ( !services.port:80
 Writing `(?a:1 ?b:2)` without the inner spaces produces
 `syntax error: validate: missing closing group after`. Check your licence's
 `OQL version` with `onyphe-preflight.sh`; groups need version 2.
+
+### Several values of one field (OR)
+
+Put `?` on **every** term and wrap them in a spaced group so the OR does not
+bleed into the rest of the query:
+
+```
+# WRONG - OR is not a keyword: error 12, "filter not allowed: ORdomain"
+category:datascan (domain:revolut.com OR domain:revolut.codes OR domain:revolutlabs.com)
+
+# RIGHT
+category:datascan ( ?domain:revolut.com ?domain:revolut.codes ?domain:revolutlabs.com )
+
+# Different fields are fine too: either condition, then AND a third
+category:ctiscan ( ?tcp.dest:8080 ?app.protocol:socks ) -dayago:1
+```
+
+Quote a value that contains a space, colon, parenthesis or bracket:
+`?cert.subject.cn:"Major Cobalt Strike"`.
+
+### Several patterns of one field (OR / NOT with wildcard functions)
+
+For `keyword` fields, the pattern functions have OR and NOT forms of their own.
+Repeat the function; each repeat is OR-combined:
+
+```
+# Any of these patterns (alias -owd:)
+category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com
+
+# Match one pattern, exclude another (alias -nwd:), and an exact exclusion with !
+category:datascan -wildcard:domain,revolut.* -notwildcard:domain,revolut.fake.* !domain:revolut.example
+
+# Regexp equivalents (anchored, case-insensitive): -orregexp: / -notregexp:
+category:datascan -orregexp:domain,"revolut[a-z0-9-]*\\.com" -notregexp:domain,".*\\.fake\\.com"
+```
+
+`?` is one character and `*` zero or more in a wildcard pattern. Both families
+match `keyword` fields only; on a `text` field they never match, with no error.
 
 ## The single most common cause of a 0 result
 

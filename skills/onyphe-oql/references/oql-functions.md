@@ -58,6 +58,19 @@ onyphe -count -search 'category:ctiscan -exists:jarm.fingerprint.md5 -monthago:1
 | `-orregexp:FIELD,"RE"` | `-ore:` | Repeatable, OR-combined |
 | `-notregexp:FIELD,"RE"` | `-nre:` | Exclusion |
 
+Combining them (`-owd:`/`-nwd:` are the aliases of the OR and NOT forms):
+
+```
+# OR: repeat the function
+category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com
+# NOT: keep one pattern, drop another
+category:datascan -wildcard:domain,revolut.* -notwildcard:domain,revolut.fake.*
+```
+
+For plain values use `?field:v` (OR) and `!field:v` (NOT), grouped as
+`( ?domain:a.com ?domain:b.com )`. There is no `OR`/`NOT` keyword; see the
+[syntax section](../SKILL.md).
+
 Both families work on **`keyword` fields only**. Against a `text` field they do
 not error — they simply never match. Check the type in
 [ctiscan-fields.md](ctiscan-fields.md) first. This is why honeypot candidates
