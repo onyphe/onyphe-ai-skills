@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# Check the prerequisites of the ONYPHE skills: the ONYPHE CLI, jq, and an API key.
+# Check the prerequisites of the ONYPHE skills: the ONYPHE CLI and its Perl
+# modules, jq, and an API key.
 #
 # Nothing is installed without a typed confirmation, and nothing needs the
-# network until you accept the CLI install. The CLI is cloned into a throwaway
+# network until you accept an install: first the CLI's missing Perl modules
+# (apt-get/cpanm), then the CLI itself. The CLI is cloned into a throwaway
 # temporary directory that is removed on exit. The API key is never read,
 # printed or copied: only the existence of ~/.onyphe.ini is checked.
 #
@@ -15,7 +17,7 @@
 set -euo pipefail
 
 CLI_REPO="https://github.com/onyphe/cli.git"
-CLI_MIN_VERSION="4.20.1"
+CLI_MIN_VERSION="4.20.2"
 CONTACT="contact@onyphe.io"
 INI="$HOME/.onyphe.ini"
 
@@ -86,25 +88,72 @@ check_jq() {
 
 # --- ONYPHE CLI -------------------------------------------------------------
 
-print_cli_deps() {
-   say "     The CLI is Perl and needs these modules first:"
-   if [[ "$(os_family)" == "debian" ]]; then
-      cat <<'DEPS'
-       sudo apt-get install cpanminus libmojolicious-perl libtie-ixhash-perl \
-          liblwp-protocol-https-perl libjson-xs-perl libfile-slurp-perl \
-          libregexp-ipv6-perl libtext-csv-xs-perl libnet-ip-perl
-       sudo cpanm -n Config::INI::Tiny Text::ParseWords Net::IPv4Addr \
-          Regexp::IPv4 Compress::Raw::Zlib
-DEPS
-   else
-      cat <<'DEPS'
-       (install cpanminus first)
-       sudo cpanm -n Mojolicious Config::INI::Tiny Tie::IxHash \
-          LWP::Protocol::https JSON::XS Text::ParseWords File::Slurp \
-          Regexp::IPv4 Text::CSV_XS Net::IPv4Addr Regexp::IPv6 \
-          Compress::Raw::Zlib Net::IP
-DEPS
+# Non-core modules the CLI needs, from its Build.PL plus Module::Build to run
+# it and Compress::Raw::Zlib from its README.
+CLI_PERL_MODULES=(
+   Module::Build Mojolicious Config::INI::Tiny Tie::IxHash
+   LWP::Protocol::https JSON::XS Text::ParseWords File::Slurp
+   Net::IPv4Addr Regexp::IPv4 Regexp::IPv6 Text::CSV_XS Net::IP
+   Compress::Raw::Zlib
+)
+
+# Debian packages the modules where it can; the rest come from CPAN.
+DEBIAN_APT_PACKAGES=(
+   cpanminus libmodule-build-perl libmojolicious-perl libtie-ixhash-perl
+   liblwp-protocol-https-perl libjson-xs-perl libfile-slurp-perl
+   libregexp-ipv6-perl libtext-csv-xs-perl libnet-ip-perl
+)
+DEBIAN_CPAN_MODULES=(
+   Config::INI::Tiny Text::ParseWords Net::IPv4Addr Regexp::IPv4
+   Compress::Raw::Zlib
+)
+
+missing_perl_modules() {
+   local module
+   for module in "${CLI_PERL_MODULES[@]}"; do
+      perl -M"$module" -e1 >/dev/null 2>&1 || printf '%s\n' "$module"
+   done
+}
+
+# Report missing Perl modules and offer to install them.
+# Returns 0 when none are missing afterwards.
+check_cli_deps() {
+   local -a absent
+   command -v perl >/dev/null 2>&1 || {
+      bad "perl is not installed (the CLI is written in Perl)"
+      return 1
+   }
+   mapfile -t absent < <(missing_perl_modules)
+   if [[ ${#absent[@]} -eq 0 ]]; then
+      ok "Perl modules for the CLI: all ${#CLI_PERL_MODULES[@]} present"
+      return 0
    fi
+   bad "Perl modules for the CLI: ${absent[*]}"
+   say "     Install them with:"
+   if [[ "$(os_family)" == "debian" ]]; then
+      say "       sudo apt-get install ${DEBIAN_APT_PACKAGES[*]}"
+      say "       sudo cpanm -n ${DEBIAN_CPAN_MODULES[*]}"
+   else
+      say "       (install cpanminus first)"
+      say "       sudo cpanm -n ${CLI_PERL_MODULES[*]}"
+   fi
+   confirm "     Run these commands now?" || return 1
+   if [[ "$(os_family)" == "debian" ]]; then
+      sudo apt-get install "${DEBIAN_APT_PACKAGES[@]}" || return 1
+      sudo cpanm -n "${DEBIAN_CPAN_MODULES[@]}" || return 1
+   else
+      command -v cpanm >/dev/null 2>&1 || {
+         say "     cpanm is not installed; install cpanminus and run this script again."
+         return 1
+      }
+      sudo cpanm -n "${CLI_PERL_MODULES[@]}" || return 1
+   fi
+   mapfile -t absent < <(missing_perl_modules)
+   if [[ ${#absent[@]} -gt 0 ]]; then
+      bad "Perl modules still missing: ${absent[*]}"
+      return 1
+   fi
+   ok "Perl modules for the CLI: installed"
 }
 
 install_cli() {
@@ -120,43 +169,50 @@ install_cli() {
    say "     Cloning $CLI_REPO into $tmpdir"
    git clone --depth 1 "$CLI_REPO" "$tmpdir/cli" || return 1
    (
-      cd "$tmpdir/cli"
-      perl Build.PL
-      ./Build
-      ./Build test
+      # Chained, because errexit does not apply when install_cli is called
+      # as part of an && list.
+      cd "$tmpdir/cli" && perl Build.PL && ./Build && ./Build test || exit 1
       say "     './Build install' normally needs root."
       confirm "     Run 'sudo ./Build install' now?" || {
          say "     Skipped. The temporary clone is deleted on exit; run this script again to retry."
          exit 2
       }
-      sudo ./Build install
+      sudo ./Build install || exit 1
    )
 }
 
+cli_version() {
+   command -v onyphe >/dev/null 2>&1 || return 0
+   onyphe -version 2>/dev/null | sed -n 's/^ONYPHE Version: *//p' | head -n1
+}
+
 check_cli() {
-   local version
-   if command -v onyphe >/dev/null 2>&1; then
-      version=$(onyphe -version 2>/dev/null | sed -n 's/^ONYPHE Version: *//p' | head -n1)
-      if [[ -z "$version" ]]; then
-         bad "onyphe is on PATH but 'onyphe -version' printed no version"
-         missing=1
-      elif version_ge "$version" "$CLI_MIN_VERSION"; then
-         ok "onyphe CLI: $version (minimum $CLI_MIN_VERSION)"
-         return 0
-      else
-         bad "onyphe CLI $version is older than $CLI_MIN_VERSION; update it from $CLI_REPO"
-         missing=1
-      fi
-   else
+   local version missing_before_cli=$missing
+   version=$(cli_version)
+   if [[ -n "$version" ]] && version_ge "$version" "$CLI_MIN_VERSION"; then
+      ok "onyphe CLI: $version (minimum $CLI_MIN_VERSION)"
+      return 0
+   fi
+   missing=1
+   if ! command -v onyphe >/dev/null 2>&1; then
       bad "onyphe CLI is not installed (source: ${CLI_REPO%.git})"
-      missing=1
+   elif [[ -z "$version" ]]; then
+      bad "onyphe is on PATH but 'onyphe -version' printed no version (often a missing Perl module)"
+   else
+      bad "onyphe CLI $version is older than $CLI_MIN_VERSION; update it from $CLI_REPO"
    fi
 
-   print_cli_deps
+   # Building without the modules only fails later, in './Build test'.
+   check_cli_deps || {
+      say "     Install the missing Perl modules, then run this script again to build the CLI."
+      return 0
+   }
    if confirm "     Clone the CLI into a temporary directory and build it now?"; then
-      if install_cli && command -v onyphe >/dev/null 2>&1; then
-         ok "onyphe CLI installed: $(onyphe -version 2>/dev/null | head -n1)"
-         missing=0
+      version=""
+      install_cli && version=$(cli_version)
+      if [[ -n "$version" ]] && version_ge "$version" "$CLI_MIN_VERSION"; then
+         ok "onyphe CLI installed: $version"
+         missing=$missing_before_cli
       else
          say "     CLI install did not complete. Follow ${CLI_REPO%.git} by hand."
       fi

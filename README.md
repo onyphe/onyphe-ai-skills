@@ -46,14 +46,16 @@ set for an installed plugin, and both advisory hooks are wired through
 
 ### Prerequisites
 
-Run `./prerequisites.sh` to check all of the following in one go. It offers to
-build the CLI from <https://github.com/onyphe/cli> in a temporary directory,
-and prints the `jq` install command for your OS. Or check by hand:
+Run `./prerequisites.sh` to check all of the following in one go. When the CLI
+is missing or too old, it checks the Perl modules the CLI needs (including
+`Net::IP`, required since 4.20.2) and offers to install the missing ones, then
+offers to build the CLI from <https://github.com/onyphe/cli> in a temporary
+directory. It prints the `jq` install command for your OS. Or check by hand:
 
-The ONYPHE CLI, 4.20.1 or later:
+The ONYPHE CLI, 4.20.2 or later:
 
 ```bash
-onyphe -version     # ONYPHE Version: 4.20.1
+onyphe -version     # ONYPHE Version: 4.20.2
 ```
 
 Source and install instructions: <https://github.com/onyphe/cli>.
