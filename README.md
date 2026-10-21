@@ -9,6 +9,24 @@ field models, and treating "no result" as "safe").
 An ONYPHE subscription with API access is required; every command runs against
 your own API key.
 
+## Getting started
+
+```bash
+git clone https://github.com/onyphe/onyphe-ai-skills.git
+cd onyphe-ai-skills
+./prerequisites.sh                              # 1. check jq, the ONYPHE CLI and your API key
+claude plugin marketplace add .                 # 2. register this repository as a marketplace
+claude plugin install onyphe                    # 3. install the plugin
+./scripts/onyphe-preflight.sh ctiscan ctiurl    # 4. confirm what your key can do
+```
+
+Then start Claude Code and ask, for example, *"onyphe summary 192.0.2.10"*.
+
+`prerequisites.sh` tells you what is missing and how to fix it. It installs
+nothing without a typed `y`, never reads or prints your API key (it only checks
+that `~/.onyphe.ini` exists), and exits `0` when everything is in place. Run it
+again after fixing anything it reports. The sections below give the detail.
+
 ## Install
 
 Clone the repository, register it as a plugin marketplace, then install the
@@ -27,6 +45,10 @@ set for an installed plugin, and both advisory hooks are wired through
 `hooks/hooks.json`, which a bare skill directory does not carry.
 
 ### Prerequisites
+
+Run `./prerequisites.sh` to check all of the following in one go. It offers to
+build the CLI from <https://github.com/onyphe/cli> in a temporary directory,
+and prints the `jq` install command for your OS. Or check by hand:
 
 The ONYPHE CLI, 4.20.1 or later:
 
