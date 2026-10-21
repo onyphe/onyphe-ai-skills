@@ -92,7 +92,7 @@ print_cli_deps() {
       cat <<'DEPS'
        sudo apt-get install cpanminus libmojolicious-perl libtie-ixhash-perl \
           liblwp-protocol-https-perl libjson-xs-perl libfile-slurp-perl \
-          libregexp-ipv6-perl libtext-csv-xs-perl
+          libregexp-ipv6-perl libtext-csv-xs-perl libnet-ip-perl
        sudo cpanm -n Config::INI::Tiny Text::ParseWords Net::IPv4Addr \
           Regexp::IPv4 Compress::Raw::Zlib
 DEPS
@@ -102,7 +102,7 @@ DEPS
        sudo cpanm -n Mojolicious Config::INI::Tiny Tie::IxHash \
           LWP::Protocol::https JSON::XS Text::ParseWords File::Slurp \
           Regexp::IPv4 Text::CSV_XS Net::IPv4Addr Regexp::IPv6 \
-          Compress::Raw::Zlib
+          Compress::Raw::Zlib Net::IP
 DEPS
    fi
 }
