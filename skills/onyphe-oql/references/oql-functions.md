@@ -62,9 +62,9 @@ Combining them (`-owd:`/`-nwd:` are the aliases of the OR and NOT forms):
 
 ```
 # OR: repeat the function
-category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com
+category:datascan -orwildcard:domain,example.* -orwildcard:domain,example*.com
 # NOT: keep one pattern, drop another
-category:datascan -wildcard:domain,revolut.* -notwildcard:domain,revolut.fake.*
+category:datascan -wildcard:domain,example.* -notwildcard:domain,example.fake.*
 ```
 
 For plain values use `?field:v` (OR) and `!field:v` (NOT), grouped as

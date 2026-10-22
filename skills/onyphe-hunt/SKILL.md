@@ -11,7 +11,7 @@ description: >-
   baseline, then branches on what the baseline shows, with a mandatory
   deception gate before anything is called a finding. Always confirms scope and
   estimated cost with the user before starting.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # onyphe-hunt

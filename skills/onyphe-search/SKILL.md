@@ -108,11 +108,11 @@ done
 
 # Several values of one field: OR with ?, grouped (no OR keyword exists)
 onyphe -count -search \
-  'category:datascan ( ?domain:revolut.com ?domain:revolut.codes ?domain:revolutlabs.com )'
+  'category:datascan ( ?domain:example.com ?domain:example.net ?domain:example.org )'
 
 # Several patterns: -orwildcard: ORs, -notwildcard: excludes
 onyphe -count -search \
-  'category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com -notwildcard:domain,revolut.fake.*'
+  'category:datascan -orwildcard:domain,example.* -orwildcard:domain,example*.com -notwildcard:domain,example.fake.*'
 
 # Post-process in the same call with an OPP pipeline
 onyphe -size 100 -maxpage 1 -search \

@@ -11,8 +11,8 @@ run_hook() {
 }
 
 echo "--- Test: the reported failing command is caught ---"
-out=$(run_hook "which jq; onyphe -search 'category:datascan (domain:revolut.com OR
- domain:revolut.codes OR domain:revolutlabs.com)' -maxpage 10 > datascan.ndjson")
+out=$(run_hook "which jq; onyphe -search 'category:datascan (domain:example.com OR
+ domain:example.net OR domain:example.org)' -maxpage 10 > datascan.ndjson")
 assert_contains "flags OR" "keyword(s) 'OR'" "$out"
 assert_contains "names the fix" "?domain:" "$out"
 assert_contains "mentions the error signature" "ORdomain" "$out"
@@ -23,11 +23,11 @@ assert_contains "NOT" "'NOT'" "$(run_hook "onyphe -search 'category:ctiscan tcp.
 assert_contains "||"  "||"    "$(run_hook "onyphe -search 'category:ctiscan ( tcp.dest:443 || tcp.dest:80 )'")"
 
 echo "--- Test: correct OQLv2 stays silent ---"
-assert_empty "grouped ? terms" "$(run_hook "onyphe -search 'category:datascan ( ?domain:revolut.com ?domain:revolut.codes ?domain:revolutlabs.com )'")"
+assert_empty "grouped ? terms" "$(run_hook "onyphe -search 'category:datascan ( ?domain:example.com ?domain:example.net ?domain:example.org )'")"
 assert_empty "! term" "$(run_hook "onyphe -search 'category:ctiscan !services.port:80'")"
 
 echo "--- Test: wildcard / regexp / exists OR and NOT functions stay silent ---"
-for q in '-orwildcard:domain,revolut.*' '-owd:domain,a*' '-notwildcard:domain,x.*' \
+for q in '-orwildcard:domain,example.*' '-owd:domain,a*' '-notwildcard:domain,x.*' \
          '-orregexp:domain,"a.*"' '-notregexp:domain,"b.*"' '-orexists:tag'; do
    assert_empty "silent on $q" "$(run_hook "onyphe -search 'category:datascan $q'")"
 done

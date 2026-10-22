@@ -1,7 +1,7 @@
 ---
 name: onyphe-export
 description: Use when the user wants to pull a complete ONYPHE population rather than a sample — e.g. "onyphe export," "export all onyphe results for," "dump every host matching," "pull the full ctiscan population," "onyphe bulk pull," or "get more than 10000 results from onyphe." Wraps `onyphe -export` and `-postexport`, which stream NDJSON with no page limit and no result ceiling. Always requires a `-fields:` projection. Not for sampling or counting (see onyphe-search), and not available on every licence — check with onyphe-preflight first.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # onyphe-export

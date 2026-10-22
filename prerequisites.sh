@@ -24,6 +24,8 @@ INI="$HOME/.onyphe.ini"
 missing=0
 tmpdir=""
 
+# Invoked through the EXIT trap below, which shellcheck does not follow.
+# shellcheck disable=SC2317
 cleanup() {
    [[ -n "$tmpdir" && -d "$tmpdir" ]] && rm -rf "$tmpdir"
    return 0

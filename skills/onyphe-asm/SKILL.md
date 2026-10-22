@@ -1,7 +1,7 @@
 ---
 name: onyphe-asm
 description: Use when the user wants to check an asset inventory against ONYPHE risk and vulnerability data: run the Discovery API on an inventory.txt, find exposed databases, login pages, sensitive protocols or CVEs on their own assets, or see how a risk changed over the last months. Wraps `onyphe -discovery riskscan|vulnscan`. Trigger phrases include "onyphe discovery," "check my inventory," "risks on our assets," "CVEs on our assets," "riskscan," "vulnscan," "exposed on our attack surface," and "inventory.txt." Not for building the inventory (see onyphe-asd-discover), the prioritised multi-step assessment (see onyphe-asm-assess), or hunting outside a known inventory (see onyphe-search).
-version: 1.1.0
+version: 1.2.0
 ---
 
 # onyphe-asm

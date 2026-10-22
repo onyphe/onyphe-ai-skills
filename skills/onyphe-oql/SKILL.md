@@ -56,10 +56,10 @@ bleed into the rest of the query:
 
 ```
 # WRONG - OR is not a keyword: error 12, "filter not allowed: ORdomain"
-category:datascan (domain:revolut.com OR domain:revolut.codes OR domain:revolutlabs.com)
+category:datascan (domain:example.com OR domain:example.net OR domain:example.org)
 
 # RIGHT
-category:datascan ( ?domain:revolut.com ?domain:revolut.codes ?domain:revolutlabs.com )
+category:datascan ( ?domain:example.com ?domain:example.net ?domain:example.org )
 
 # Different fields are fine too: either condition, then AND a third
 category:ctiscan ( ?tcp.dest:8080 ?app.protocol:socks ) -dayago:1
@@ -75,13 +75,13 @@ Repeat the function; each repeat is OR-combined:
 
 ```
 # Any of these patterns (alias -owd:)
-category:datascan -orwildcard:domain,revolut.* -orwildcard:domain,revolut*.com
+category:datascan -orwildcard:domain,example.* -orwildcard:domain,example*.com
 
 # Match one pattern, exclude another (alias -nwd:), and an exact exclusion with !
-category:datascan -wildcard:domain,revolut.* -notwildcard:domain,revolut.fake.* !domain:revolut.example
+category:datascan -wildcard:domain,example.* -notwildcard:domain,example.fake.* !domain:example.test
 
 # Regexp equivalents (anchored, case-insensitive): -orregexp: / -notregexp:
-category:datascan -orregexp:domain,"revolut[a-z0-9-]*\\.com" -notregexp:domain,".*\\.fake\\.com"
+category:datascan -orregexp:domain,"example[a-z0-9-]*\\.com" -notregexp:domain,".*\\.fake\\.com"
 ```
 
 `?` is one character and `*` zero or more in a wildcard pattern. Both families

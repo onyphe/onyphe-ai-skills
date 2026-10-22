@@ -1,7 +1,7 @@
 ---
 type: regex
 target: last_message
-pattern: '\?domain:revolut\.com\s+\?domain:revolut\.codes\s+\?domain:revolutlabs\.com'
+pattern: '\?domain:example\.com\s+\?domain:example\.net\s+\?domain:example\.org'
 match: contains
 ---
 

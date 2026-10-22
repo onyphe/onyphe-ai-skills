@@ -6,22 +6,52 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-10-22
+
+First public release.
+
 ### Added
 
+- `prerequisites.sh`: checks `jq`, the ONYPHE CLI version and that `~/.onyphe.ini`
+  exists. When the CLI is missing or too old it checks the Perl modules it needs
+  (including `Net::IP`), and offers to install them and build the CLI from
+  <https://github.com/onyphe/cli>. Installs nothing without a typed `y`; never
+  reads the API key. The README opens with a Getting started section built on it.
 - Advisory `check-oql-boolean.sh` hook: flags `OR`/`AND`/`NOT`/`||`/`&&` written as
   keywords in an OQL query. OQL has none; the API answers
   `filter not allowed: ORdomain`, which agents misread as "OR is unsupported".
 - `oql-boolean-or` eval and `test-hook-boolean.sh`.
+- `riskscan-vulnscan.md`: the full vulnscan verdict-tag table (check-based versus
+  version-based, with counts), and the CVE counts riskscan carries.
 
 ### Changed
 
+- The ONYPHE CLI minimum is now 4.20.2.
 - `onyphe-oql` and `onyphe-search` (1.1.0) state that boolean logic is `?` (OR),
   `!` (NOT) and implicit AND, with a several-values recipe and
   `-orwildcard:` / `-notwildcard:` / `-orregexp:` / `-notregexp:` examples; the
   search error table maps the `ORdomain` signature. A one-line reminder is added
-  to `onyphe-export`, `onyphe-pivot` and `onyphe-hunt`.
+  to `onyphe-export`, `onyphe-pivot` and `onyphe-hunt` (1.0.1).
+- `onyphe-asm` and `onyphe-asm-assess` (1.2.0): riskscan carries the same CVE
+  detections as vulnscan, positives only; vulnscan is for evidence (the stored
+  response), negative verdicts and history beyond seven months. Version-based
+  `vulnerableversion` is counted and reported separately from check-based
+  `vulnerable`, which alone misses most CVE-bearing records.
+- `onyphe-asm-count.sh` adds `-exists:cve` to every vulnscan call, so verdicts
+  without a CVE (most vulnscan documents, including `unknownversion`) drop out.
+  riskscan calls are unchanged.
+
+### Measured
+
+- Only 5 592 604 of 1 938 348 687 vulnscan documents carry a `cve`; 4 925 037 are
+  `vulnerableversion` against 438 847 `vulnerable` (2026-10-16, commands in
+  `riskscan-vulnscan.md`).
 
 ### Fixed
+
+- Added `.claude-plugin/plugin.json` and `marketplace.json`. 1.1.0 documented
+  `claude plugin marketplace add` and `claude plugin install onyphe` but shipped
+  without the manifests those commands need.
 
 - `onyphe-export.sh` and `onyphe-count.sh` split OQL from an OPP pipeline at the
   first **unquoted** `|`, as the CLI does. A `|` inside a double-quoted value, such

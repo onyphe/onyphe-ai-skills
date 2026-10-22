@@ -1,7 +1,7 @@
 ---
 name: onyphe-pivot
 description: Use when the user wants to find infrastructure related to something they already have — e.g. "onyphe pivot," "find related infrastructure," "what else shares this certificate/hash/fingerprint," "onyphe rarity analysis," "which of this host's attributes are distinctive," "expand from this IP," or "unique values for this field." Covers the ctiscan pivot-field set, rarity scoring with onyphe-rarity.sh, the OPP correlation procs, and the ASD pivot-query API for server-side unique values. Not for a plain criteria search (see onyphe-search) or a single-asset lookup (see onyphe-summary).
-version: 1.0.0
+version: 1.0.1
 ---
 
 # onyphe-pivot

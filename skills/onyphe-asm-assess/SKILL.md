@@ -9,7 +9,7 @@ description: >-
   Do NOT fire on a single Discovery query (see onyphe-asm), on building the
   inventory (see onyphe-asd-discover), or on hunting unknown infrastructure
   (see onyphe-hunt).
-version: 1.1.0
+version: 1.2.0
 ---
 
 # onyphe-asm-assess

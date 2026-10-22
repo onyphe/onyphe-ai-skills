@@ -46,6 +46,8 @@ assert_exit "pipeline exits 1" 1 "$rc"
 assert_contains "explains why" "no | pipeline" "$out"
 
 echo "--- Test: | inside a quoted regexp is counted ---"
+# $3 is written literally into the mock, which expands it as its own argument.
+# shellcheck disable=SC2016
 mock_onyphe 'printf "%s" "$3" > "'"$TEST_DIR"'/seen_query"; echo "{\"total\":7}"'
 out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan -regexp:x,".*(a|b).*" -dayago:1' 2>/dev/null); rc=$?
 assert_exit "quoted | exits 0" 0 "$rc"
