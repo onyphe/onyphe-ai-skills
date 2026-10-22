@@ -13,10 +13,14 @@
 #         stdout stream stays clean for a pipe into `opp`.
 # Exit codes:
 #   0  success
-#   1  usage error or CLI failure
+#   1  usage error, CLI failure, or a query with an unclosed double quote
 #   2  the query already carries its own -fields: (nothing to add)
 
 set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/oql.sh
+source "$SCRIPT_DIR/lib/oql.sh"
 
 usage() {
    cat >&2 <<'USAGE'
@@ -46,7 +50,16 @@ outfile="${3:-}"
 [[ -z "$query"  ]] && usage
 [[ -z "$fields" ]] && usage
 
-if [[ "$query" == *"-fields:"* ]]; then
+# An unclosed quote makes the CLI read the rest of the argument as quoted, so
+# an appended -fields: would be swallowed into a value and the export would
+# run unprojected.
+if ! oql_quotes_balanced "$query"; then
+   echo "The query has an unclosed double quote; -fields: cannot be added safely." >&2
+   exit 1
+fi
+
+# Only an unquoted -fields: is a projection. One inside a value is just text.
+if [[ "$(oql_unquoted "$query")" == *"-fields:"* ]]; then
    echo "The query already carries -fields:. Pass the field list once, not twice." >&2
    exit 2
 fi
@@ -54,16 +67,17 @@ fi
 # Split the OQL from any OPP pipeline so -fields: lands on the OQL side. The
 # CLI splits on the first unquoted |, and -fields: after that point would be
 # read as an argument to a proc rather than as an OQL function.
-if [[ "$query" == *"|"* ]]; then
-   oql="${query%%|*}"
-   opp="|${query#*|}"
-   oql="${oql%"${oql##*[![:space:]]}"}"
-else
-   oql="$query"
-   opp=""
-fi
+oql_split "$query"
+full="${OQL_PART} -fields:${fields}${OPP_PART:+ | ${OPP_PART}}"
 
-full="${oql} -fields:${fields}${opp:+ ${opp}}"
+# Split the result the way the CLI will. If -fields: does not end the OQL
+# part, the projection would be lost: fail loudly rather than export the
+# wrong query with full documents.
+oql_split "$full"
+if [[ "$OQL_PART" != *" -fields:${fields}" ]] || ! oql_quotes_balanced "$OQL_PART"; then
+   echo "Refusing to export: -fields: would not land on the OQL side of: $full" >&2
+   exit 1
+fi
 
 echo "[onyphe-export] $full" >&2
 

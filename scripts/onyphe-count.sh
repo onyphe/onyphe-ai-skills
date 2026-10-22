@@ -15,6 +15,10 @@
 
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=scripts/lib/oql.sh
+source "$SCRIPT_DIR/lib/oql.sh"
+
 usage() {
    cat >&2 <<'USAGE'
 Usage: onyphe-count.sh '<OQL>'
@@ -34,8 +38,18 @@ USAGE
 
 query="$1"
 
+# An unclosed quote turns everything after it into a value. onyphe-hpcheck.sh
+# appends its control terms to the end, where they would silently vanish.
+if ! oql_quotes_balanced "$query"; then
+   echo "onyphe-count.sh: the query has an unclosed double quote." >&2
+   exit 1
+fi
+
 # An OPP pipeline changes what comes back and would break the total parse.
-if [[ "$query" == *"|"* ]]; then
+# Only an unquoted | starts one; a | inside a quoted value, such as a regexp
+# alternation, is OQL.
+oql_split "$query"
+if [[ -n "$OPP_PART" ]]; then
    echo "onyphe-count.sh takes a bare OQL query, with no | pipeline." >&2
    echo "Counting happens server-side; there is nothing for OPP to process." >&2
    exit 1

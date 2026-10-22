@@ -45,6 +45,27 @@ out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan x:y | uniq ip.dest
 assert_exit "pipeline exits 1" 1 "$rc"
 assert_contains "explains why" "no | pipeline" "$out"
 
+echo "--- Test: | inside a quoted regexp is counted ---"
+mock_onyphe 'printf "%s" "$3" > "'"$TEST_DIR"'/seen_query"; echo "{\"total\":7}"'
+out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan -regexp:x,".*(a|b).*" -dayago:1' 2>/dev/null); rc=$?
+assert_exit "quoted | exits 0" 0 "$rc"
+assert_eq "total returned" "7" "$out"
+assert_eq "query passed through unchanged" 'category:ctiscan -regexp:x,".*(a|b).*" -dayago:1' "$(cat "$TEST_DIR/seen_query")"
+
+echo "--- Test: | inside a quoted value at the end is counted ---"
+out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan html.title.text:"a|b"' 2>/dev/null); rc=$?
+assert_exit "quoted | exits 0" 0 "$rc"
+
+echo "--- Test: quoted | plus a real pipeline is still refused ---"
+out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan -regexp:x,".*(a|b).*" -dayago:1 | uniq ip.dest' 2>&1); rc=$?
+assert_exit "pipeline exits 1" 1 "$rc"
+assert_contains "explains why" "no | pipeline" "$out"
+
+echo "--- Test: refuses an unclosed quote ---"
+out=$(PATH="$TEST_DIR:$PATH" bash "$SCRIPT" 'category:ctiscan html.title.text:"a|b' 2>&1); rc=$?
+assert_exit "unclosed quote exits 1" 1 "$rc"
+assert_contains "explains why" "unclosed double quote" "$out"
+
 echo "--- Test: usage on no args ---"
 PATH="$TEST_DIR:$PATH" bash "$SCRIPT" >/dev/null 2>&1; rc=$?
 assert_exit "no args exits 1" 1 "$rc"

@@ -13,8 +13,8 @@ belong in this directory.
 Scripts are also checked with:
 
 ```bash
-bash -n scripts/*.sh hooks/*.sh tests/*.sh
-shellcheck -x --source-path=tests scripts/*.sh hooks/*.sh tests/*.sh
+bash -n scripts/*.sh scripts/lib/*.sh hooks/*.sh tests/*.sh
+shellcheck -x --source-path=tests scripts/*.sh scripts/lib/*.sh hooks/*.sh tests/*.sh
 claude plugin validate .
 ```
 

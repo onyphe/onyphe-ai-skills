@@ -21,6 +21,20 @@ All notable changes to this package are documented here. The format follows
   search error table maps the `ORdomain` signature. A one-line reminder is added
   to `onyphe-export`, `onyphe-pivot` and `onyphe-hunt`.
 
+### Fixed
+
+- `onyphe-export.sh` and `onyphe-count.sh` split OQL from an OPP pipeline at the
+  first **unquoted** `|`, as the CLI does. A `|` inside a double-quoted value, such
+  as the regexp alternation `-regexp:http.header.server,".*(red hat|rocky).*"`, made
+  export insert `-fields:` inside the regexp: the query ran with no projection and
+  a silently wrong population, and exited 0. Count refused the same query, so
+  `onyphe-hpcheck.sh` could not run the deception gate on it.
+- `onyphe-export.sh` ignores a `-fields:` inside a quoted value, refuses a query with
+  an unclosed double quote, and re-splits the assembled query, exiting 1 unless
+  `-fields:` ends the OQL part. `onyphe-count.sh` also refuses an unclosed quote,
+  which would swallow the control terms `onyphe-hpcheck.sh` appends.
+- The splitter is shared in `scripts/lib/oql.sh`, with `test-oql-split.sh`.
+
 ## [1.1.0] — 2026-10-16
 
 ### Added

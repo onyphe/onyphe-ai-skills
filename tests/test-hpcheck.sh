@@ -55,6 +55,21 @@ mock_counts 10 1 2 7
 out=$(bash "$TEST_DIR/scripts/onyphe-hpcheck.sh" 'x:y' 2>/dev/null)
 assert_eq "header" "total	tagged	mp199	other	tag%	hpish%" "$(printf '%s\n' "$out" | head -1)"
 
+echo "--- Test: a quoted regexp alternation runs all four counts ---"
+# The real onyphe-count.sh this time, over a stub CLI that logs each query.
+mkdir -p "$TEST_DIR/bin"
+cat > "$TEST_DIR/bin/onyphe" <<MOCK
+#!/usr/bin/env bash
+printf '%s\n' "\$3" >> "$TEST_DIR/queries"
+echo '{"total":4}'
+MOCK
+chmod +x "$TEST_DIR/bin/onyphe"
+rm -f "$TEST_DIR/queries"
+out=$(PATH="$TEST_DIR/bin:$PATH" bash "$SCRIPT" '-regexp:x,".*(a|b).*"' 2>"$TEST_DIR/err"); rc=$?
+assert_exit "alternation exits 0" 0 "$rc"
+assert_eq "four counts sent" "4" "$(wc -l < "$TEST_DIR/queries" | tr -d ' ')"
+assert_contains "quoted regexp reached the CLI" '-regexp:x,".*(a|b).*"' "$(head -1 "$TEST_DIR/queries")"
+
 echo "--- Test: usage on no args ---"
 bash "$SCRIPT" >/dev/null 2>&1; rc=$?
 assert_exit "no args exits 1" 1 "$rc"
