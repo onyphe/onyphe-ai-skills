@@ -15,12 +15,18 @@ your own API key.
 git clone https://github.com/onyphe/onyphe-ai-skills.git
 cd onyphe-ai-skills
 ./prerequisites.sh                              # 1. check jq, the ONYPHE CLI and your API key
-claude plugin marketplace add .                 # 2. register this repository as a marketplace
+claude plugin marketplace add ./                # 2. register this repository as a marketplace
 claude plugin install onyphe                    # 3. install the plugin
 ./scripts/onyphe-preflight.sh ctiscan ctiurl    # 4. confirm what your key can do
 ```
 
 Then start Claude Code and ask, for example, *"onyphe summary 192.0.2.10"*.
+
+Just want the plugin, without a clone of the repo? On Claude Code 2.1.275
+or later, steps 2 and 3 collapse into one slash command inside Claude Code:
+ `/plugin install onyphe --marketplace onyphe/onyphe-ai-skills`
+Steps 1 and 4 are the two that need a clone, so keep the route above if you
+want them. See [Install](#install).
 
 `prerequisites.sh` tells you what is missing and how to fix it. It installs
 nothing without a typed `y`, never reads or prints your API key (it only checks
@@ -29,8 +35,16 @@ again after fixing anything it reports. The sections below give the detail.
 
 ## Install
 
-Clone the repository, register it as a plugin marketplace, then install the
-plugin:
+On Claude Code 2.1.275 or later, install from GitHub in one step. This is a
+slash command, typed inside Claude Code — not a shell command:
+
+```
+/plugin install onyphe --marketplace onyphe/onyphe-ai-skills
+```
+
+That is the whole install. It does not leave you a clone, so if you want to run
+`prerequisites.sh` or `scripts/onyphe-preflight.sh` by hand — or to work on the
+skills — use the clone route instead:
 
 ```bash
 git clone https://github.com/onyphe/onyphe-ai-skills.git

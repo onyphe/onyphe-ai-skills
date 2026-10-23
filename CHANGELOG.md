@@ -6,6 +6,44 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.3.0] — 2026-10-23
+
+### Added
+
+- `.claude-plugin/icon.png`: the ONYPHE logo as the plugin icon (900 × 900 PNG,
+  transparent background), picked up from the default path without an `icon`
+  field in `plugin.json`.
+- `onyphe-oql` (1.2.0), `tag-vocabulary.md`: an **open directories** section.
+  Hunt listings with `tag:opendir`, not `tag:open` (94 663 against 573 582
+  `ctiscan` documents a day; in `ctiurl` the two overlap 98%). Adds the
+  `file` / `file::exec` / `file::apk` and `suspicious::*` tags, four one-week
+  intersection queries sized for alerting, `extract.file` usage (bare and
+  path-prefixed values), and ranking-tag exclusion as a noise filter.
+- `tag-vocabulary.md`: `hpish 0%` is not evidence for these threat tags, which
+  appear never to co-occur with `honeypot`; `services.count` shape is the
+  discriminator that worked. Count distinct hosts, not documents — one
+  `extract.file:bins.sh` "cluster" of 4 746 documents was 10 hosts.
+- `tag-vocabulary.md`: `opendir`, `file*`, `suspicious::*`, `botnet`,
+  `botnet::murdoc` and `mozi` in the tag table and the triage-severity lists.
+
+### Changed
+
+- `tag-vocabulary.md`: `ctiscan` `tag:malware` is no longer written off as
+  unusable. It is 1 document on `-dayago:1` but 28 on `-weekago:1`, every one
+  also tagged `mozi` (2026-10-23). Widen the window before dismissing a tag;
+  only `rat` and `backdoor` remain listed as unusable selectors.
+- README: documents the one-step `/plugin install onyphe --marketplace
+  onyphe/onyphe-ai-skills` route (Claude Code 2.1.275 or later) alongside the
+  clone route, which is still needed for `prerequisites.sh` and
+  `onyphe-preflight.sh`. The clone route registers the marketplace with
+  `claude plugin marketplace add ./`.
+
+### Fixed
+
+- `hooks/hooks.json` quotes `${CLAUDE_PLUGIN_ROOT}` in every hook command. Unquoted,
+  an install path containing a space split into several words and the hooks
+  failed to run.
+
 ## [1.2.0] — 2026-10-22
 
 First public release.

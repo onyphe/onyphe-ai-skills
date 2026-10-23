@@ -1,7 +1,7 @@
 ---
 name: onyphe-oql
 description: Use when the user needs help with OQL, ONYPHE Query Language syntax, how to write an ONYPHE query, which ONYPHE fields exist, or why an ONYPHE query returned nothing — field names, operators, condition groups, time functions, wildcards and regexp, and the ctiscan/ctiurl versus datascan field translation. Trigger phrases include "OQL syntax," "onyphe query syntax," "how do I write an onyphe query," "what onyphe fields are available," "onyphe query help," and "why does my onyphe query return 0." This is a reference skill, not a CLI wrapper — defer to onyphe-search or onyphe-export to actually run the query once it is built.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # onyphe-oql

@@ -6,22 +6,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-credit-burn.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-credit-burn.sh\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-category-fields.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-category-fields.sh\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-oql-boolean.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-oql-boolean.sh\"",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-asd-live.sh",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/hooks/check-asd-live.sh\"",
             "timeout": 5
           }
         ]
