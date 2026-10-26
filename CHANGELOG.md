@@ -6,6 +6,21 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `AGENTS.md`: operating instructions for AI coding agents working in this
+  repository ([agents.md](https://agents.md/) convention) — setup and check
+  commands, repository layout, the repository-specific rules (API key, measured
+  numbers, zero-is-not-absence, the ASM Inventory / on-demand / live-DNS scope
+  boundary, credit cost) and a pre-finish checklist. Opens with a **what
+  ONYPHE is** primer for an agent with no prior context — OQL has no
+  `AND`/`OR`/`NOT` keywords, the two field models fail silently, the API is
+  metered and live, the data describes real third-party hosts including
+  honeypots — then routes to `skills/onyphe-oql/`, the vendor docs, the
+  OpenAPI spec and the `onyphe/material` index templates rather than
+  restating them. Points at `README.md`, `CONTRIBUTING.md` and
+  `SECURITY.md` for the rest.
+
 ## [1.3.0] — 2026-10-23
 
 ### Added
