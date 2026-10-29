@@ -6,6 +6,8 @@ All notable changes to this package are documented here. The format follows
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-10-29
+
 ### Added
 
 - `onyphe-oql` (1.3.0), `references/resolver-fields.md`: a field model for
