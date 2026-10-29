@@ -70,6 +70,18 @@ assert_exit "alternation exits 0" 0 "$rc"
 assert_eq "four counts sent" "4" "$(wc -l < "$TEST_DIR/queries" | tr -d ' ')"
 assert_contains "quoted regexp reached the CLI" '-regexp:x,".*(a|b).*"' "$(head -1 "$TEST_DIR/queries")"
 
+echo "--- Test: --base retargets all four counts ---"
+rm -f "$TEST_DIR/queries"
+PATH="$TEST_DIR/bin:$PATH" bash "$SCRIPT" 'http.hostname:"www.example.com"' \
+  --base 'category:ctiurl' >/dev/null 2>&1
+assert_eq "four counts sent" "4" "$(wc -l < "$TEST_DIR/queries" | tr -d ' ')"
+assert_eq "every query is ctiurl" "4" "$(grep -c 'category:ctiurl' "$TEST_DIR/queries")"
+assert_eq "none fell back to ctiscan" "0" "$(grep -c 'category:ctiscan' "$TEST_DIR/queries" || true)"
+
+echo "--- Test: --base is documented in the usage text ---"
+usage=$(bash "$SCRIPT" -h 2>&1 || true)
+assert_contains "usage explains --base" "--base replaces the default" "$usage"
+
 echo "--- Test: usage on no args ---"
 bash "$SCRIPT" >/dev/null 2>&1; rc=$?
 assert_exit "no args exits 1" 1 "$rc"

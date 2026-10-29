@@ -73,6 +73,24 @@ echo "--- Test: a document with none of the fields exits 1 ---"
 bash "$RARITY" --file "$FIXTURES/ctiscan_c2_3.ndjson" --fields no.such.field >/dev/null 2>&1; rc=$?
 assert_exit "no pivot fields exits 1" 1 "$rc"
 
+echo "--- Test: --category defaults to ctiscan ---"
+err=$(bash "$RARITY" --file "$FIXTURES/ctiscan_c2_3.ndjson" --fields cert.issuer.cn --dry-run 2>&1 >/dev/null)
+assert_contains "default category is ctiscan" "category:ctiscan " "$err"
+
+echo "--- Test: --category ctiurl reaches the query ---"
+err=$(bash "$RARITY" --file "$FIXTURES/ctiscan_c2_3.ndjson" --fields cert.issuer.cn --dry-run --category ctiurl 2>&1 >/dev/null)
+assert_contains "ctiurl used" "category:ctiurl " "$err"
+assert_not_contains "ctiscan not used" "category:ctiscan " "$err"
+
+echo "--- Test: --category passes a comma list through verbatim ---"
+err=$(bash "$RARITY" --file "$FIXTURES/ctiscan_c2_3.ndjson" --fields cert.issuer.cn --dry-run --category ctiscan,ctiurl 2>&1 >/dev/null)
+assert_contains "comma list preserved" "category:ctiscan,ctiurl " "$err"
+
+echo "--- Test: a datascan-model category is rejected, not silently zeroed ---"
+err=$(bash "$RARITY" --file "$FIXTURES/ctiscan_c2_3.ndjson" --fields cert.issuer.cn --category datascan 2>&1 >/dev/null); rc=$?
+assert_exit "unsupported category exits 1" 1 "$rc"
+assert_contains "reason named" "ctiscan-model only" "$err"
+
 echo "--- Test: usage on no args ---"
 bash "$RARITY" >/dev/null 2>&1; rc=$?
 assert_exit "no args exits 1" 1 "$rc"

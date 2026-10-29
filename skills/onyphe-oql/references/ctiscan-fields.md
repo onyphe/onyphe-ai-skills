@@ -2,8 +2,26 @@
 
 Every field in the ctiscan schema, with its type and **how many documents
 carried it in a one-day window, measured 2026-09-25** on a Griffin View licence.
-`ctiurl` uses this same model; `http.url` and the URL-level fields are what
-distinguish a ctiurl document from a ctiscan one.
+`ctiurl` uses this same model; `http.hostname` — the virtual host that was
+scanned — is what distinguishes a ctiurl document from a ctiscan one. (`http.url`
+is present in both and does not discriminate: 176 124 460 ctiscan documents carry
+it.)
+
+> **Every count below was measured under `category:ctiscan` alone.** The
+> regeneration loop at the end of this file is where that is baked in. The
+> *model* is shared with ctiurl; the *numbers* are not, and a field that looks
+> dead here can be universal there.
+>
+> `http.hostname` is the worked example. Measured 2026-10-29 on the same licence:
+>
+> ```bash
+> onyphe -count -search 'category:ctiscan -exists:http.hostname -dayago:1'   #       1 455
+> onyphe -count -search 'category:ctiurl  -exists:http.hostname -dayago:1'   #  25 287 226
+> onyphe -count -search 'category:ctiurl -dayago:1'                          #  25 287 230
+> ```
+>
+> 0.0007% of ctiscan, 99.99998% of ctiurl. Reading the 1 455 below as "this field
+> is not worth pivoting on" is the mistake this box exists to prevent.
 
 The count column is the point of this table. 47 of the 216 schema fields
 returned **exactly zero** - they exist in the query builder and in the published
@@ -16,6 +34,9 @@ Do not build a signal on any of these. All 216 schema fields were counted over
 a one-day window; every one of the 47 below was then re-counted over a one-month
 window and returned zero again. This is not a quiet week - the fields carry no
 data.
+
+As above, this was measured under `category:ctiscan`. The claim is not known to
+extend to `category:ctiurl`, and was not re-run there.
 
 
 - `app.data.raw`
@@ -407,7 +428,32 @@ while read -r f; do
 done < fields.txt
 ```
 
-One credit per field, 216 fields.
+One credit per field, 216 fields. Swap in `category:ctiurl` for the URL-level
+view — the counts differ, sometimes by five orders of magnitude, and the table
+below does not cover them.
+
+### Measured under `category:ctiurl`
+
+The fields the URL-level view is actually built on, one-day window, measured
+**2026-10-29**. Denominator: `category:ctiurl -dayago:1` = 25 287 230.
+
+| Field | Type | Docs/day | Share |
+|---|---|---:|---:|
+| `app.data.text` | text | 25 287 230 | 100% |
+| `app.tls` | boolean | 25 287 230 | 100% |
+| `tcp.dest` | integer | 25 287 230 | 100% |
+| `http.hostname` | keyword | 25 287 226 | ~100% |
+| `http.url` | keyword | 25 287 226 | ~100% |
+| `http.code` | short | 25 287 226 | ~100% |
+| `services.count` | integer | 25 247 777 | 99.8% |
+| `extract.url` | keyword | 22 238 848 | 87.9% |
+| `extract.hostname` | keyword | 22 228 055 | 87.9% |
+| `extract.domain` | keyword | 22 201 266 | 87.8% |
+| `tag` | keyword | 20 202 322 | 79.9% |
+| `html.title.raw` | keyword | 17 210 706 | 68.1% |
+| `html.title.text` | text | 17 210 706 | 68.1% |
+| `cert.subject.cn` | keyword | 11 895 532 | 47.0% |
+| `extract.file` | keyword | 1 994 893 | 7.9% |
 
 To re-verify a **single** row without spending 216 credits — which is the usual
 case, and the one worth doing before you trust any number here:

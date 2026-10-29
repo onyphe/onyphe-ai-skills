@@ -50,7 +50,21 @@ Columns: total tagged mp199 other tag% hpish%
                  plausibility before calling it tradecraft
   total 0     -> inconclusive. Not "clean".
 
-Cost: four credits per candidate.
+--base replaces the default query prefix, which is 'category:ctiscan'. Use it
+to gate an indicator against another corpus:
+
+  onyphe-hpcheck.sh 'http.hostname:"www.example.com"' --base 'category:ctiurl'
+
+Run each corpus as its own invocation and quote each result against its own
+base rate. tag:honeypot is 11.3% of ctiscan but 0.015% of ctiurl (2026-10-29),
+so an hpish% carried across is meaningless.
+
+The mp199 column is a ctiscan HOST-level emulator-fleet heuristic
+(services.count:199). It does not carry its ctiscan meaning under another
+base: in ctiurl it is 4094 documents a day, none of them tagged. A 0 there is
+the control failing to transfer, not a clean result.
+
+Cost: four credits per candidate, per base.
 USAGE
    exit 1
 }

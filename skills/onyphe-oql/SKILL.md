@@ -1,7 +1,7 @@
 ---
 name: onyphe-oql
 description: Use when the user needs help with OQL, ONYPHE Query Language syntax, how to write an ONYPHE query, which ONYPHE fields exist, or why an ONYPHE query returned nothing — field names, operators, condition groups, time functions, wildcards and regexp, and the ctiscan/ctiurl versus datascan field translation. Trigger phrases include "OQL syntax," "onyphe query syntax," "how do I write an onyphe query," "what onyphe fields are available," "onyphe query help," and "why does my onyphe query return 0." This is a reference skill, not a CLI wrapper — defer to onyphe-search or onyphe-export to actually run the query once it is built.
-version: 1.2.0
+version: 1.3.0
 ---
 
 # onyphe-oql
@@ -27,6 +27,8 @@ This skill does not run anything. Once the query is right, hand it to
 category:<CATEGORY> field:<value> field:<value> -<function>:<value>
 ```
 
+One category, or a comma list of them — see [Several categories](#several-categories).
+
 - **There is no `OR`, `AND` or `NOT` keyword.** Writing one is not a licence
   problem and not "OR unsupported": the parser glues it to the next token as a
   field name and fails with `filter not allowed: ORdomain`. Use the prefixes below.
@@ -36,6 +38,36 @@ category:<CATEGORY> field:<value> field:<value> -<function>:<value>
 - `-function:value` — a server-side function, always prefixed with `-`.
 - Values are **not** case-sensitive. Field names **are**, and are always lowercase.
 - Quote any value containing a space: `cert.subject.cn:"Major Cobalt Strike"`.
+
+### Several categories
+
+One query can select more than one category with a comma list:
+
+```
+category:ctiscan,ctiurl ip.dest:203.0.113.10 -weekago:1
+```
+
+This returns the **union**. Verified 2026-10-29 on a one-day window:
+`category:ctiscan tag:opendir` 93 020 + `category:ctiurl tag:opendir` 78 050 =
+`category:ctiscan,ctiurl tag:opendir` 171 070, exactly.
+
+Two things to know before using it:
+
+- **It is not in the vendor documentation**, and the OpenAPI specification models
+  `category` as a single enum value. It is nonetheless in production use in
+  ONYPHE's own tooling, and the count above is what it does. If you check the
+  spec and find it absent, that discrepancy is expected rather than a sign this
+  page is wrong.
+- **The comma list is for `category:`.** Do not assume it generalises to other
+  fields — for several values of an ordinary field, use the spaced OR group
+  below.
+
+**The one new hazard: do not straddle the two field models.**
+`category:ctiscan,ctiurl` is safe because both sides share the ctiscan model. A
+list mixing a ctiscan-model category with a datascan-model one
+(`category:ctiscan,datascan`) has no field vocabulary valid on both halves, so
+every field name you write is wrong for one of them — and that half contributes
+0 without an error.
 
 ### Condition groups
 
@@ -115,7 +147,26 @@ it**, is in [references/ctiscan-fields.md](references/ctiscan-fields.md).
 Read that file before building a signal on an unfamiliar field. 47 of the 216
 fields in the published schema carry no data at all — including JARM, JA4S,
 JA4T, domhash and ssdeep. A query against one of them returns 0 forever, and
-nothing warns you.
+nothing warns you. **Every count in that file was measured under
+`category:ctiscan`**, so a field that looks dead there can be universal in
+ctiurl: `http.hostname` is 1 455 documents a day in ctiscan and 25 287 226 — of
+25 287 230 — in ctiurl.
+
+Passive DNS has its own field set. `category:resolver` uses the datascan model
+(`ip:`, `hostname:`, `domain:`) and is on **Griffin View only**. Its fields,
+their types, how many documents carry each, and — the part nothing else
+documents — **which fields stop being searchable at eight months**, are in
+[references/resolver-fields.md](references/resolver-fields.md).
+
+Three things to know before writing one:
+
+- Resolver reaches **12 months**, the deepest of any category here.
+- **15 of its 50 queryable fields return 0 from `-monthago:8`**, including both
+  `forward` and `reverse`. A long-window query filtering on one of them is
+  indistinguishable from "that name was never there". Use `type:forward` /
+  `type:reverse` at depth instead.
+- `type:` takes ONYPHE resolution classes, not DNS record mnemonics. `type:a`
+  and `type:ptr` both match nothing.
 
 The short version of the field types:
 

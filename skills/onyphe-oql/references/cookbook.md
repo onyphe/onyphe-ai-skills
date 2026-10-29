@@ -29,6 +29,37 @@ evidence that the population vanished.
 | Typosquat lookalikes in passive DNS | 1219 | `category:resolver -wildcard:domain,g??gle.com !domain:google.com -weekago:1` |
 | Honeypot self-identification in a page title | 65 | `category:ctiscan -regexp:html.title.raw,".*honeypot.*" -dayago:1` |
 
+## Several categories at once (measured 2026-10-29)
+
+| What it finds | Count | Query |
+|---|---:|---|
+| Open directories across both CTI corpora | 171070 | `category:ctiscan,ctiurl tag:opendir -dayago:1` |
+| …the ctiscan half alone | 93020 | `category:ctiscan tag:opendir -dayago:1` |
+| …the ctiurl half alone | 78050 | `category:ctiurl tag:opendir -dayago:1` |
+
+The three together are the proof that the comma list returns the union: 93 020 +
+78 050 = 171 070.
+
+## Passive DNS (measured 2026-10-29)
+
+`category:resolver` is **Griffin View only**. Field model is datascan's (`ip:`,
+not `ip.dest:`).
+
+| What it finds | Count | Query |
+|---|---:|---|
+| The whole resolver corpus, one day | 268743831 | `category:resolver -dayago:1` |
+| Names ONYPHE learned from certificate transparency | 40652156 | `category:resolver source:ctl -dayago:1` |
+| Names learned from URL-level vhost scanning | 36777156 | `category:resolver source:ctiurl -dayago:1` |
+| Nameserver records | 9580156 | `category:resolver type:ns -dayago:1` |
+| One domain's records, nine months back | 936690 | `category:resolver domain:cloudflare.com -monthago:9` |
+| One IP's records, nine months back | 53478 | `category:resolver ip:1.1.1.1 -monthago:9` |
+| A DNS record type that does not exist | 0 | `category:resolver type:a -dayago:1` |
+
+That last row is the trap worth remembering: `type:` holds ONYPHE resolution
+classes (`forward`, `reverse`, `soa`, `ns`, `mx`, `txt`, `cname`, `spf`), not DNS
+record mnemonics. `type:a` and `type:ptr` are syntactically valid and match
+nothing. See [resolver-fields.md](resolver-fields.md).
+
 ## Reading these counts
 
 The spread is the lesson. `cert.issuer.cn:"Major Cobalt Strike"` returns **6**
@@ -50,6 +81,11 @@ And in every case, run the candidate through `onyphe-hpcheck.sh` before calling
 it tradecraft. Roughly one ctiscan document in nine carries `tag:honeypot`
 (25 769 626 of 229 980 327 on 2026-09-25), so a population that looks like an
 actor is quite often a deception fleet.
+
+That rate is ctiscan's alone. In ctiurl it is 3 894 of 25 287 230 — 0.015%, a
+factor of about 740 — so gate each corpus against its own base rate with
+`--base 'category:ctiurl'` rather than carrying one number across. See
+`onyphe-honeypot`.
 
 ## Device classes that exist
 

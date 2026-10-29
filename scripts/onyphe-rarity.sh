@@ -52,7 +52,7 @@ component.text,entity.text,ip.asn,ip.organization"
 
 usage() {
    cat >&2 <<'USAGE'
-Usage: onyphe-rarity.sh <ip> [--window <fn>] [--fields <list>] [--dry-run]
+Usage: onyphe-rarity.sh <ip> [--category <list>] [--window <fn>] [--fields <list>] [--dry-run]
        onyphe-rarity.sh --file <doc.ndjson> [...]
 
 Builds a rarity table for one host's pivotable attributes.
@@ -60,6 +60,16 @@ Builds a rarity table for one host's pivotable attributes.
   onyphe-rarity.sh 203.0.113.10
   onyphe-rarity.sh 203.0.113.10 --window -weekago:1
   onyphe-rarity.sh --file data/host.ndjson --dry-run
+  onyphe-rarity.sh 203.0.113.10 --category ctiurl
+
+--category takes ctiscan (default), ctiurl, or ctiscan,ctiurl. Nothing else:
+the seed pull keys on ip.dest and every default field is a ctiscan-model name,
+so a datascan-model category would return 0 with no error - which in this
+table is indistinguishable from a maximally rare attribute.
+
+Run ctiscan and ctiurl as SEPARATE passes rather than pooling them. A rarity
+band is a claim about a denominator, and the two corpora differ by roughly an
+order of magnitude.
 
 Reads rarest-first. Under ~5 documents is a candidate operator artefact worth
 pivoting; over ~25 is shared infrastructure or a product default. Confirm a
@@ -75,6 +85,7 @@ target=""
 docfile=""
 window="-dayago:1"
 fields="$DEFAULT_FIELDS"
+category="ctiscan"
 dry_run=0
 
 while [[ $# -gt 0 ]]; do
@@ -82,12 +93,20 @@ while [[ $# -gt 0 ]]; do
       --file)    docfile="${2:-}"; shift 2 ;;
       --window)  window="${2:-}";  shift 2 ;;
       --fields)  fields="${2:-}";  shift 2 ;;
+      --category) category="${2:-}"; shift 2 ;;
       --dry-run) dry_run=1;        shift   ;;
       -h|--help) usage ;;
       -*)        echo "Unknown option: $1" >&2; usage ;;
       *)         target="$1";      shift   ;;
    esac
 done
+
+# Reject anything outside the ctiscan field model rather than letting it return
+# a silent zero. See the --category note in the usage text.
+case "$category" in
+   ctiscan|ctiurl|ctiscan,ctiurl|ctiurl,ctiscan) ;;
+   *) echo "Unsupported --category '$category': this script is ctiscan-model only (ip.dest seed, ctiscan field names)." >&2; exit 1 ;;
+esac
 
 [[ -z "$target" && -z "$docfile" ]] && usage
 [[ -n "$target" && -n "$docfile" ]] && usage
@@ -99,18 +118,25 @@ if [[ -n "$docfile" ]]; then
    [[ -f "$docfile" ]] || { echo "No such file: $docfile" >&2; exit 1; }
    cp "$docfile" "$tmp"
 else
-   echo "[onyphe-rarity] pulling ctiscan for $target" >&2
-   onyphe -search "category:ctiscan ip.dest:$target $window" -size 10 -maxpage 1 > "$tmp" 2>/dev/null || true
+   echo "[onyphe-rarity] pulling $category for $target" >&2
+   onyphe -search "category:$category ip.dest:$target $window" -size 10 -maxpage 1 > "$tmp" 2>/dev/null || true
    if [[ ! -s "$tmp" ]]; then
-      echo "No ctiscan document for $target within $window." >&2
+      echo "No $category document for $target within $window." >&2
       echo "Widen the window, or confirm the IP was scanned at all:" >&2
-      echo "  onyphe-count.sh 'category:ctiscan ip.dest:$target -monthago:1'" >&2
+      echo "  onyphe-count.sh 'category:$category ip.dest:$target -monthago:1'" >&2
       exit 1
    fi
 fi
 
-# Flatten every document to dotted keys, keep only the pivot fields, and
-# explode arrays so each value is counted on its own.
+# Flatten every document to dotted keys and keep only the pivot fields.
+#
+# Known limitation: this does NOT explode arrays. paths(scalars) renders an
+# array element as 'tag.0', 'tag.1', ... which never equals the bare field
+# name, so array-valued fields are dropped rather than counted. In practice
+# the loss is small - the array-valued fields here are tag-like, and tag
+# rarity does not signal a relationship between hosts the way a key or hash
+# does. Fixing it would also multiply the credit cost, so it needs its own
+# change and its own cost estimate rather than riding along here.
 IFS=',' read -r -a field_list <<< "$fields"
 : > "$tmp.pairs"
 for f in "${field_list[@]}"; do
@@ -138,7 +164,7 @@ while IFS=$'\t' read -r field value; do
    case "$value" in
       *'"'*) echo "[onyphe-rarity] skipping $field (value contains a quote)" >&2; continue ;;
    esac
-   q="category:ctiscan ${field}:\"${value}\" ${window}"
+   q="category:${category} ${field}:\"${value}\" ${window}"
    if [[ "$dry_run" -eq 1 ]]; then
       printf '?\t%s\t%s\n' "$field" "$value"
       echo "  $q" >&2

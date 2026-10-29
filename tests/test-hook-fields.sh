@@ -50,6 +50,15 @@ assert_empty "grep untouched" "$(run_hook "grep -r 'data:' .")"
 echo "--- Test: silent when no category is named ---"
 assert_empty "no category, no warning" "$(run_hook "onyphe -search 'data:\"Apache\"'")"
 
+echo "--- Test: a comma category list takes the ctiscan branch ---"
+out=$(run_hook "onyphe -search 'category:ctiscan,ctiurl url:/ -dayago:1'")
+assert_contains "datascan field caught under a comma list" "http.url:" "$out"
+
+echo "--- Test: resolver takes the datascan branch ---"
+out=$(run_hook "onyphe -search 'category:resolver ip.dest:203.0.113.10 -dayago:1'")
+assert_contains "ctiscan field caught under resolver" "ip:" "$out"
+assert_empty "correct resolver dialect is silent" "$(run_hook "onyphe -search 'category:resolver ip:203.0.113.10 -dayago:1'")"
+
 echo "--- Test: always exits 0 ---"
 jq -n --arg c "onyphe -search 'category:ctiscan data:\"x\"'" '{tool_input:{command:$c}}' | bash "$HOOK" >/dev/null 2>&1
 assert_exit "advisory, never blocks" 0 $?

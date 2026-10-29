@@ -1,7 +1,7 @@
 ---
 name: onyphe-honeypot
-description: Use when an ONYPHE result needs to be checked for deception before it is believed — e.g. "is this a honeypot," "onyphe honeypot check," "validate this indicator," "is this population real," "false positive check," "why does this banner match so many hosts," or "how much of this is deception." Covers the measured honeypot base rate in ctiscan, the control population that actually works, the four-count validation procedure, and the structural signals that beat banner matching. Consult before any ONYPHE population count becomes a finding. Not for running the underlying query (see onyphe-search).
-version: 1.0.0
+description: Use when an ONYPHE result needs to be checked for deception before it is believed — e.g. "is this a honeypot," "onyphe honeypot check," "validate this indicator," "is this population real," "false positive check," "why does this banner match so many hosts," or "how much of this is deception." Covers the measured honeypot base rates in ctiscan and ctiurl, the control population that actually works, the four-count validation procedure, and the structural signals that beat banner matching. Consult before any ONYPHE population count becomes a finding. Not for running the underlying query (see onyphe-search).
+version: 1.1.0
 ---
 
 # onyphe-honeypot
@@ -31,6 +31,60 @@ by four orders of magnitude — `compromised` is 6 275, `webshell` is 176.
 
 Any statement of the form "N hosts run X" that has not accounted for this is
 wrong by an unknown margin, usually upward.
+
+## The base rate does not transfer to ctiurl
+
+Measured 2026-10-29, one-day window:
+
+```
+category:ctiurl -dayago:1                25 287 230
+category:ctiurl tag:honeypot -dayago:1        3 894      = 0.015%
+category:ctiscan -dayago:1               214 531 635
+category:ctiscan tag:honeypot -dayago:1   24 321 936      = 11.3%
+```
+
+**11.3% against 0.015% — a factor of about 740.** Carry the ctiscan base rate
+into a ctiurl result and you will read an ordinary population as suspiciously
+clean, or an alarming one as unremarkable. Quote each corpus against its own
+rate, and run the gate once per corpus:
+
+```bash
+"${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-hpcheck.sh" '<fragment>'
+"${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-hpcheck.sh" '<fragment>' --base 'category:ctiurl'
+```
+
+The gap is not evidence that ctiurl is cleaner. ctiurl documents are reached by
+*name*, from certificate transparency, live TLS and extracted hostnames — and an
+emulator fleet that nobody points a hostname at never enters that corpus in the
+first place. Low ctiurl deception is a property of how the corpus is built, not
+a property of the hosts in it.
+
+### In ctiurl the tag is nothing but a port count
+
+The ctiscan blind spot below is a gap in the tagging. In ctiurl it is the whole
+of it. Measured the same day:
+
+| `services.count` | Total | Tagged | **Untagged** |
+|---:|---:|---:|---:|
+| 150 | 97 | 0 | 97 |
+| 198 | 4 | 0 | 4 |
+| **199** | **4 094** | 0 | **4 094** |
+| 200 | 3 894 | 3 894 | **0** |
+| 201 | 0 | 0 | 0 |
+
+`category:ctiurl tag:honeypot !services.count:200 -dayago:1` returns **0**. Every
+tagged ctiurl document in the window sits at exactly 200 ports — the tag adds
+nothing that the port count does not already say. The ctiscan control is
+577 496, so ctiscan tagging does draw on other evidence; ctiurl tagging does not.
+
+Two consequences:
+
+- The untagged 199 fleet (4 094) is **larger than the entire tagged population**
+  (3 894). In ctiurl, `!tag:honeypot` alone discards less than half the deception
+  you can actually identify.
+- Anything a port count cannot see is invisible to the tag here. A ctiurl
+  `hpish 0.0` is a weaker statement than the same number in ctiscan, and the
+  structural signals further down carry correspondingly more weight.
 
 ## `!tag:honeypot` is not a control population
 
@@ -68,6 +122,10 @@ before deciding it is a finding:
 "${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-hpcheck.sh" '<OQL fragment>'
 ```
 
+The default base is `category:ctiscan`; `--base` replaces it wholesale, so the
+ctiurl run is a second invocation rather than a wider one. Four credits per
+candidate **per base**.
+
 | Column | Query | Means |
 |---|---|---|
 | `total` | the fragment | whole population |
@@ -76,6 +134,12 @@ before deciding it is a finding:
 | `other` | `+ !tag:honeypot !services.count:199` | genuinely new population |
 
 `hpish = (tagged + mp199) / total`.
+
+Under `--base 'category:ctiurl'` the columns still compute, but read `mp199`
+differently: `services.count` is a host-level field that the URL documents of
+that host inherit, so the column is measuring the same 200-port fleet seen
+through a different corpus. A `0` there is the control not transferring, not a
+clean result.
 
 Two real candidates, same day, same window:
 
@@ -101,12 +165,26 @@ found a new population, which then has to be characterised:
 - **Consumer or telecom ISPs, on the protocol's standard port, many
   organisations** → real devices. The candidate is matching a product, not an
   actor.
+- **ctiurl only: many unrelated `http.hostname` values on few `ip.dest`** →
+  shared hosting or parking. The names are real and the hosts are real; neither
+  attributes the other. This is the ctiurl analogue of a provider fleet
+  artefact, and it is the control to reach for when `mp199` reads 0.
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-export.sh" \
   'category:ctiscan <fragment> !tag:honeypot !services.count:199 -dayago:1' \
   ip.dest,ip.asn,ip.organization,tcp.dest,services.count,tag \
   data/residual.ndjson
+
+# profiling a ctiurl residual: add the vhost, and read fan-out as the
+# shared-hosting control that mp199 cannot give you here
+"${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-export.sh" \
+  'category:ctiurl <fragment> !tag:honeypot !services.count:199 -dayago:1' \
+  ip.dest,ip.asn,ip.organization,tcp.dest,services.count,http.hostname,tag \
+  data/residual_ctiurl.ndjson
+
+opp 'uniq ip.dest | addcount'               < data/residual_ctiurl.ndjson | tail -1
+opp 'uniq ip.dest,http.hostname | addcount' < data/residual_ctiurl.ndjson | tail -1
 
 jq -r '.ip.organization // empty' data/residual.ndjson | sort | uniq -c | sort -rn | head
 jq -r '.tcp.dest // empty'        data/residual.ndjson | sort | uniq -c | sort -rn | head
@@ -184,12 +262,19 @@ any population.
   Validate non-HTTP candidates with a phrase match or `app.data.md5`.
 - `-regexp:` is anchored and case-insensitive: write patterns lowercase, wrapped
   in `.*` for substrings.
-- These figures are ctiscan. datascan has its own honeypot population
-  (3 513 291 tagged on the same day) and its own field names.
+- The ctiscan/ctiurl split above was measured on 2026-10-29; the `services.count`
+  table in the ctiscan section dates from 2026-09-25. Both drift — re-measure
+  rather than citing them.
+- Unless a section says otherwise these figures are ctiscan. datascan has its own
+  honeypot population (3 513 291 tagged on the same day) and its own field names.
+- Resolver has no honeypot gate and needs none: a passive-DNS document is a name
+  and an address, with no banner to emulate. Its failure mode is
+  non-attributable naming — mechanical provider PTRs, shared hosting, parked
+  domains — which `onyphe-hunt` phase 2c gates separately.
 
 ## Cross-references
 
 - **onyphe-search** — the four causes of a zero result, before calling one clean.
 - **onyphe-pivot** — rarity scoring; this skill is gate 1 of its three.
 - **onyphe-oql** — field types, regexp limits.
-- **onyphe-hunt** — where this runs as a mandatory phase.
+- **onyphe-hunt** — where this runs as a mandatory phase, once per corpus.

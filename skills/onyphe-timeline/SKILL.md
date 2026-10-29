@@ -1,7 +1,7 @@
 ---
 name: onyphe-timeline
 description: Use when the user wants to know how something changed over time in ONYPHE — e.g. "onyphe timeline," "when did this appear," "has this host changed," "track this cluster over time," "onyphe historical," "is this growing or shrinking," or "what did this look like last month." Builds a time series by re-querying per time bucket, since ONYPHE has no change-event endpoint. Handles the ctiscan retention cliff and the licence-dependent crossover to datascan. Not for current state (see onyphe-search or onyphe-summary).
-version: 1.0.0
+version: 1.0.1
 ---
 
 # onyphe-timeline
@@ -70,23 +70,36 @@ decline.** Run the query at increasing depth until it returns 0, and treat the
 last non-zero bucket as the edge of the evidence, not the edge of the activity.
 
 Nominal retention by category: ctiscan ~1 month; datascan, datashot and riskscan
-7 months; most others 12 months; ctl, domain, hostname and ip 48 months. CTI-only
+7 months; **resolver 12 months** (and most other 12-month categories); ctl,
+domain, hostname and ip 48 months. CTI-only
 editions cap ctiscan far shorter still — 7 days, 14 days or 30 days depending on
 the edition.
 
-## Crossing to datascan for depth
+## Crossing over for depth
 
-When the window needed exceeds ctiscan's retention, datascan is the only way
-further back — **and only if the licence includes it.**
+When the window needed exceeds ctiscan's retention, what is available depends on
+the licence *and* on the question. On Griffin View, `datascan` reaches 7 months
+for **service** content and `resolver` reaches 12 for **naming** — resolver is
+the deepest category this package touches. On a CTI-only edition neither exists,
+and ctiscan's edge is the edge of the evidence.
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-preflight.sh" datascan
+"${CLAUDE_PLUGIN_ROOT}/scripts/onyphe-preflight.sh" resolver
 ```
 
-| Preflight result | What to do |
-|---|---|
-| `datascan` present (Griffin View) | Cross over, translate the fields, and say so in the output. |
-| `datascan` absent (CTI-only: Catfish, Sealion, Shark) | **Stop at ctiscan's edge.** Report the window you could actually cover. Do not return an empty long-window result as if it were an answer. |
+| Preflight result | Depth | What to do |
+|---|---|---|
+| `resolver` present (Griffin View) | **12 months**, naming only | Deepest reach available. Answers what a host was *called*, never what it was *running*. |
+| `datascan` present (Griffin View) | 7 months, service content | Cross over, translate the fields, and say so in the output. |
+| Both absent (CTI-only: Catfish, Sealion, Shark) | ctiscan's ~1 month is a hard floor | **Stop at ctiscan's edge.** Report the window you could actually cover. Do not return an empty long-window result as if it were an answer. |
+
+**Resolver's depth is not uniform.** It keeps 12 months of records but only about
+7 months of searchable fields: 15 of its 50 queryable fields, including both
+`forward` and `reverse`, return 0 from `-monthago:8` (measured 2026-10-29). A
+long-window query filtering on one of them is indistinguishable from "that name
+was never there". Use `type:forward` / `type:reverse` at depth, and check the
+stripped-field list in `onyphe-oql/references/resolver-fields.md` first.
 
 Crossing over is a change of data model, not just a category swap:
 
@@ -103,9 +116,12 @@ whenever a series crosses the seam:
 
 - **The models differ.** Counts on either side are not strictly comparable; they
   are different scanners with different coverage and cadence.
-- **Older datascan documents are pruned.** Beyond 30 days some fields are dropped
-  and the raw response is truncated from 16 KB to 4 KB, so a content comparison
-  across the seam can show a difference that is retention, not change.
+- **Older documents are pruned.** This applies to the whole *optimized* set —
+  datascan, resolver, riskscan and vulnscan — not datascan alone. The raw
+  response is truncated from 16 KB to 4 KB beyond 30 days, so a content
+  comparison across the seam can show a difference that is retention, not
+  change. Field *searchability* is a separate, later boundary: on resolver it
+  falls at 8 months, not 30 days (measured 2026-10-29).
 
 ## Reading a series
 

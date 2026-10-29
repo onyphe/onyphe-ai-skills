@@ -23,7 +23,7 @@ anything — most of the rules below are unintelligible without it.
 
 ONYPHE is a commercial French cyber defence search engine. It scans the whole
 IPv4 space and 5000+ TCP ports from Europe, the US and Asia, fingerprints what
-answers, and sells query access to the resulting data. Five facts drive
+answers, and sells query access to the resulting data. Six facts drive
 everything in this repository:
 
 1. **Queries are written in OQL**, ONYPHE's own query language, not SQL and not
@@ -31,10 +31,14 @@ everything in this repository:
    AND is implicit between filters, `?field:value` is OR, `!field:value` is NOT,
    and `-name:value` is a function. **There are no `AND` / `OR` / `NOT`
    keywords** — writing them produces an error message that reads like a licence
-   problem.
+   problem. `category:` additionally takes a comma list
+   (`category:ctiscan,ctiurl`) which returns the union; it is in production use
+   but appears in neither the vendor documentation nor the OpenAPI spec, so do
+   not "correct" it to an OR group on the strength of the spec.
 2. **Categories fall into two incompatible field models.** `ctiscan` and
    `ctiurl` use layered names (`ip.dest`, `app.data.text`, `component.cpe`);
-   `datascan`, `vulnscan` and `riskscan` use flat ones (`ip`, `data`, `cpe`).
+   every other category — `datascan`, `vulnscan`, `riskscan`, `resolver`,
+   `ctl` and the rest of the 23 — uses flat ones (`ip`, `data`, `cpe`).
    A field from the wrong model returns **0 results with no error**, which is
    indistinguishable from the thing genuinely not being there.
 3. **The API is metered, rate-limited and real.** Every command in this package
@@ -49,12 +53,22 @@ everything in this repository:
    believed.
 5. **The CLI is a separate program** (<https://github.com/onyphe/cli>, Perl,
    BSD 3-Clause). It is not vendored here; this repository only drives it.
+6. **Licence tier decides which categories exist, and an unauthorised one is
+   silent.** `ctiscan` and `ctiurl` are on both the CTI family (Catfish,
+   Sealion, Shark) and Griffin View; `datascan` and `resolver` are Griffin View
+   only. Querying a category the key cannot see returns nothing rather than an
+   error — the same failure mode as a wrong field name. Any skill step that
+   depends on a category beyond ctiscan/ctiurl must gate on
+   `scripts/onyphe-preflight.sh <category>` (exit 3 when unauthorised) and must
+   record the skip as a skip, never as a zero.
 
 Where to get grounded, in order:
 
 - `skills/onyphe-oql/SKILL.md` and `skills/onyphe-oql/references/` — the query
-  language, the field model, the dialect map, the tag vocabulary. Read this
-  before editing any skill that contains a query.
+  language, the field models, the dialect map, the tag vocabulary. Read this
+  before editing any skill that contains a query. `ctiscan-fields.md` and
+  `resolver-fields.md` are the two per-category field references; the latter
+  also records which resolver fields stop being searchable at depth.
 - `skills/onyphe-honeypot/SKILL.md` — why a count is not yet a finding.
 - <https://search.onyphe.io/docs> — the vendor documentation.
 - <https://github.com/onyphe/material/tree/master/openapi> — the OpenAPI 3.0.3
@@ -106,15 +120,29 @@ scripts through `${CLAUDE_PLUGIN_ROOT}`, which only an installed plugin sets.
    in this package touches `~/.onyphe.ini` beyond checking that it exists, and
    script output is filtered so a key cannot leak into a transcript. Keep it
    that way. See [SECURITY.md](SECURITY.md).
-2. **Every measured number carries the command that produced it, and the date.**
-   A population count, base rate or credit figure without the
-   `onyphe -count -search '…'` beside it is an assertion, and an assertion in a
-   skill file becomes an assertion in somebody's incident report. If you cannot
-   measure it, do not state it.
+2. **Every measured number carries the command that produced it, the date, and
+   the category it was measured in.** A population count, base rate or credit
+   figure without the `onyphe -count -search '…'` beside it is an assertion, and
+   an assertion in a skill file becomes an assertion in somebody's incident
+   report. If you cannot measure it, do not state it.
+
+   The category matters as much as the date, because counts do not transfer
+   between corpora and the gap can be enormous: `http.hostname` carries 1 455
+   ctiscan documents a day and 25 287 226 of 25 287 230 ctiurl ones, and
+   `tag:honeypot` is 11.3% of ctiscan against 0.015% of ctiurl. A table that
+   does not say which category it was measured in will be read as applying to
+   all of them, and a field that looks dead in one is sometimes universal in
+   the next.
 3. **A zero result is not an absence.** "Not currently visible" and "does not
    exist" are different claims and only the first is supportable from a zero
    count. The same goes for safety: an asset with no finding has not been shown
    to be safe. Skills must never phrase it otherwise.
+
+   The same asymmetry applies to sampling: **a sample proves presence, never
+   absence.** Pulling N documents and noting which fields are missing finds
+   candidates, not facts — a field on 1% of documents is absent from a
+   100-document sample for ordinary reasons. Sample to find, then confirm each
+   candidate with a count before writing it down.
 4. **Respect the scope boundary.** This package deliberately does not cover the
    ASM Inventory API (`-asm-inventory-*`, which mutates account state) or
    on-demand scanning (`-ondemand-*`, which originates scans against third-party
@@ -140,7 +168,12 @@ scripts through `${CLAUDE_PLUGIN_ROOT}`, which only an installed plugin sets.
 - A skill `description` lists the literal phrasings that should route to it and
   ends with a negative clause naming the skills to use instead.
 - Skill body order: **When to use → Invocation → Common patterns →
-  Interpreting results → Error handling → Caveats → Cross-references**.
+  Interpreting results → Error handling → Caveats → Cross-references**. The
+  methodology skills do not follow it: `onyphe-hunt` and `onyphe-asm-assess`
+  use numbered phases, `onyphe-asd-discover` a loop. Follow the local shape
+  rather than forcing them back into this order. In the phase-numbered ones the
+  numbers are referenced from sibling skills, so add a step as a lettered
+  sub-phase (`2b`) rather than renumbering.
 - A new skill needs a routing eval under `evals/`. If a one-line prompt cannot
   distinguish it from its neighbours, its `description` is not specific enough.
 - Bump the `version` in the skill's own frontmatter when you change it, and add
@@ -154,7 +187,9 @@ scripts through `${CLAUDE_PLUGIN_ROOT}`, which only an installed plugin sets.
 
 - [ ] `bash tests/run-all.sh` passes, plus `bash -n`, `shellcheck` and
       `claude plugin validate .`.
-- [ ] New or changed numbers carry their command and date.
+- [ ] New or changed numbers carry their command, date and category.
+- [ ] Any new category or long window is gated on `onyphe-preflight.sh`, and a
+      skip is recorded as a skip rather than a zero.
 - [ ] New skill has an eval; changed skill has a bumped `version`.
 - [ ] `CHANGELOG.md` updated under `## [Unreleased]`.
 - [ ] No key, no customer data, no real inventory committed.
