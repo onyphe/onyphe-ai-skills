@@ -126,44 +126,6 @@ All notable changes to this package are documented here. The format follows
   Behaviour unchanged — fixing it multiplies the credit cost and needs its own
   change.
 
-### Measured
-
-All on 2026-10-29, Griffin View, commands in the files that quote them.
-
-- The comma category list returns the union, exactly:
-  `category:ctiscan tag:opendir -dayago:1` 93 020 +
-  `category:ctiurl tag:opendir -dayago:1` 78 050 =
-  `category:ctiscan,ctiurl tag:opendir -dayago:1` 171 070.
-- `http.hostname` is the ctiurl discriminator: 25 287 226 of 25 287 230 ctiurl
-  documents (~100%) against 1 455 ctiscan documents a day — 0.0007%.
-- Honeypot base rates are not transferable between the two corpora:
-  `tag:honeypot` is 24 321 936 of 214 531 635 ctiscan documents (11.3%) but
-  3 894 of 25 287 230 ctiurl documents (0.015%), a factor of ~740.
-  `services.count:199` is 4 094 ctiurl documents a day, none of them tagged.
-- **15 of 50 queryable resolver fields stop being searchable at 8 months** —
-  `@version`, `city`, the six `company.*`, `forward`, `latitude`, `location`,
-  `longitude`, `reverse`, `subnet`, `ttl`. The boundary is sharp: `reverse` is
-  1 586 458 128 at `-monthago:7` and 0 at `-monthago:8`, while the `hostname`
-  control holds at 9 519 355 087 and 8 030 961 463 across the same two buckets.
-  This is **not** the 30 days the published retention note implies; that figure
-  describes `data` truncation, not field removal. `ip:`, `hostname:`, `domain:`
-  and `type:` all survive to full depth.
-- Resolver retention: `-monthago:12` 883 099 652, `-monthago:13` 0.
-  `-since:12M` is accepted and returns 95 972 087 957.
-- Resolver provenance: `source:ctiscan` 100 444 838/day, `massdns` 69 583 544,
-  `ctl` 40 652 156, `ctiurl` 36 777 156, `massdns::bruteforce` 13 423 653,
-  `vulnscan` 6 144 387, `datascan` 418 795. Certificate- and vhost-derived names
-  are ~29% of a day's passive DNS.
-- **In ctiurl, `tag:honeypot` is nothing but a port count.**
-  `category:ctiurl tag:honeypot !services.count:200 -dayago:1` returns **0** —
-  every tagged document in the window sits at exactly 200 ports — against a
-  ctiscan control of 577 496. The untagged 199 fleet (4 094) is larger than the
-  whole tagged population (3 894), so `!tag:honeypot` alone discards less than
-  half the identifiable deception there.
-- Resolver record classes: `type:forward` 172 914 486/day, `reverse` 45 337 109,
-  `soa` 16 022 547, `ns` 9 580 156, `mx` 9 298 588, `txt` 8 505 151,
-  `cname` 5 835 635, `spf` 21 895. `type:a` and `type:ptr` both return 0.
-
 ## [1.3.0] — 2026-10-23
 
 ### Added
